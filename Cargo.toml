@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2020-2021 Joonas Javanainen <joonas.javanainen@gmail.com>
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+[package]
+name = "red-sculpin"
+version = "0.0.0"
+authors = ["Joonas Javanainen <joonas.javanainen@gmail.com>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+bitflags = "1.2"
