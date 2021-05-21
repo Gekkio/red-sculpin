@@ -15,23 +15,27 @@ pub trait ProgramData {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error>;
 }
 
-/// IEEE 488.2 Character Program Data
+/// Trait for types that can be encoded as character program data.
 ///
 /// Reference: IEEE 488.2: 7.7.1 - \<CHARACTER PROGRAM DATA\>
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct ProgramChars<'a>(pub &'a str);
-
-impl<'a> ProgramData for ProgramChars<'a> {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
-        encoder.begin_program_data()?;
-        encoder.write_bytes(self.0.as_bytes())?;
-        Ok(())
-    }
-}
-
-/// Trait for types that can be encoded as character program data.
 pub trait CharacterProgramData {
     fn program_mnemonic(&self) -> &str;
+}
+
+impl<T> ProgramData for T
+where
+    T: CharacterProgramData,
+{
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+        encoder.begin_program_data()?;
+        let mnemonic = self.program_mnemonic();
+        debug_assert!(
+            is_program_mnemonic(mnemonic),
+            "expected {} to be a valid program mnemonic",
+            mnemonic
+        );
+        encoder.write_bytes(mnemonic.as_bytes())
+    }
 }
 
 /// A homogeneous list of program data values
@@ -46,18 +50,6 @@ where
             data.encode(encoder)?;
         }
         Ok(())
-    }
-}
-
-impl<T> ProgramData for T
-where
-    T: CharacterProgramData,
-{
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
-        encoder.begin_program_data()?;
-        let mnemonic = self.program_mnemonic();
-        debug_assert!(is_program_mnemonic(mnemonic));
-        encoder.write_bytes(mnemonic.as_bytes())
     }
 }
 

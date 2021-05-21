@@ -41,7 +41,7 @@ use crate::{
 };
 pub use crate::{
     ieee::types::*,
-    program_data::{CharacterProgramData, ProgramChars, ProgramData, ProgramList},
+    program_data::{CharacterProgramData, ProgramData, ProgramList},
     response_data::{ArbitraryAscii, CharacterResponseData, ResponseData, ResponseList},
     scpi::types::*,
     utils::is_program_mnemonic,
