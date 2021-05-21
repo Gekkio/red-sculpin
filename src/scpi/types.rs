@@ -5,8 +5,8 @@
 use core::convert::TryFrom;
 
 use crate::{
-    decode::{DecodeError, Decoder},
-    encode::{EncodeError, Encoder},
+    decode::Decoder,
+    encode::Encoder,
     program_data::{CharacterProgramData, ProgramData},
     response_data::ResponseData,
     ByteSink, ByteSource,
@@ -375,7 +375,7 @@ pub struct SystemErrorResponse {
 }
 
 impl ResponseData for SystemErrorResponse {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         let (code, message): (i16, String) = ResponseData::decode(decoder)?;
         Ok(SystemErrorResponse {
             code: ErrorCode::from(code),
@@ -405,7 +405,7 @@ impl<T> ProgramData for ValueOrLimit<T>
 where
     T: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), EncodeError<S::Error>> {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         match self {
             ValueOrLimit::Value(value) => value.encode(encoder),
             ValueOrLimit::Limit(limit) => limit.encode(encoder),
@@ -440,7 +440,7 @@ impl<T> ProgramData for ValueOrDefault<T>
 where
     T: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), EncodeError<S::Error>> {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         match self {
             ValueOrDefault::Value(value) => value.encode(encoder),
             ValueOrDefault::Default => DefaultValue.encode(encoder),
@@ -477,7 +477,7 @@ impl<T> ProgramData for ValueOrDefaultOrLimit<T>
 where
     T: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), EncodeError<S::Error>> {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         match self {
             ValueOrDefaultOrLimit::Value(value) => value.encode(encoder),
             ValueOrDefaultOrLimit::Default => DefaultValue.encode(encoder),
@@ -505,7 +505,7 @@ impl From<Limit> for DefaultOrLimit {
 }
 
 impl ProgramData for DefaultOrLimit {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), EncodeError<S::Error>> {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         match self {
             DefaultOrLimit::Default => DefaultValue.encode(encoder),
             DefaultOrLimit::Limit(limit) => limit.encode(encoder),

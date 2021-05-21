@@ -11,20 +11,13 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub enum EncodeError<E>
-where
-    E: fmt::Debug + fmt::Display,
-{
+pub enum EncodeError {
     NonAsciiString,
     BlockSizeOverflow(usize),
     InvalidEncodeState(EncodeState),
-    Other(E),
 }
 
-impl<T> fmt::Display for EncodeError<T>
-where
-    T: fmt::Debug + fmt::Display,
-{
+impl fmt::Display for EncodeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             EncodeError::NonAsciiString => write!(f, "invalid non-ascii string"),
@@ -34,21 +27,11 @@ where
             EncodeError::InvalidEncodeState(state) => {
                 write!(f, "invalid encode state ({:?})", state)
             }
-            EncodeError::Other(err) => fmt::Display::fmt(err, f),
         }
     }
 }
 
-impl<T> Error for EncodeError<T> where T: fmt::Debug + fmt::Display {}
-
-impl<T> From<T> for EncodeError<T>
-where
-    T: fmt::Debug + fmt::Display,
-{
-    fn from(err: T) -> EncodeError<T> {
-        EncodeError::Other(err)
-    }
-}
+impl Error for EncodeError {}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum EncodeState {
@@ -89,28 +72,28 @@ impl<S: ByteSink> Encoder<S> {
             state: EncodeState::default(),
         }
     }
-    pub fn write_byte(&mut self, byte: u8) -> Result<(), EncodeError<S::Error>> {
+    pub fn write_byte(&mut self, byte: u8) -> Result<(), S::Error> {
         debug_assert!(self.state == EncodeState::Header || self.state == EncodeState::Data);
         self.sink.write_byte(byte)?;
         Ok(())
     }
-    pub fn write_bytes(&mut self, bytes: &[u8]) -> Result<(), EncodeError<S::Error>> {
+    pub fn write_bytes(&mut self, bytes: &[u8]) -> Result<(), S::Error> {
         debug_assert!(self.state == EncodeState::Header || self.state == EncodeState::Data);
         self.sink.write_bytes(bytes)?;
         Ok(())
     }
-    pub fn begin_message_unit(&mut self) -> Result<(), EncodeError<S::Error>> {
+    pub fn begin_message_unit(&mut self) -> Result<(), S::Error> {
         self.state = match self.state {
             EncodeState::Initial => EncodeState::Header,
             EncodeState::Header | EncodeState::Data => {
                 self.sink.write_byte(PROGRAM_MESSAGE_UNIT_SEPARATOR)?;
                 EncodeState::Header
             }
-            _ => return Err(EncodeError::InvalidEncodeState(self.state)),
+            _ => return Err(EncodeError::InvalidEncodeState(self.state).into()),
         };
         Ok(())
     }
-    pub fn begin_program_data(&mut self) -> Result<(), EncodeError<S::Error>> {
+    pub fn begin_program_data(&mut self) -> Result<(), S::Error> {
         self.state = match self.state {
             EncodeState::Header => {
                 self.sink.write_byte(PROGRAM_HEADER_SEPARATOR)?;
@@ -120,22 +103,22 @@ impl<S: ByteSink> Encoder<S> {
                 self.sink.write_byte(PROGRAM_DATA_SEPARATOR)?;
                 EncodeState::Data
             }
-            _ => return Err(EncodeError::InvalidEncodeState(self.state)),
+            _ => return Err(EncodeError::InvalidEncodeState(self.state).into()),
         };
         Ok(())
     }
-    pub fn end_message(&mut self) -> Result<(), EncodeError<S::Error>> {
+    pub fn end_message(&mut self) -> Result<(), S::Error> {
         self.state = match self.state {
             EncodeState::Header | EncodeState::Data => {
                 self.sink.write_byte(PROGRAM_MESSAGE_TERMINATOR)?;
                 EncodeState::End
             }
             EncodeState::End => EncodeState::End,
-            _ => return Err(EncodeError::InvalidEncodeState(self.state)),
+            _ => return Err(EncodeError::InvalidEncodeState(self.state).into()),
         };
         Ok(())
     }
-    pub fn finish(mut self) -> Result<S, EncodeError<S::Error>> {
+    pub fn finish(mut self) -> Result<S, S::Error> {
         self.end_message()?;
         Ok(self.sink)
     }
@@ -147,7 +130,7 @@ impl<S: ByteSink> Encoder<S> {
 pub fn encode_numeric_integer<S: ByteSink, T: Integer>(
     encoder: &mut Encoder<S>,
     value: T,
-) -> Result<(), EncodeError<S::Error>> {
+) -> Result<(), S::Error> {
     let mut fmt: ArrayBuffer<32> = ArrayBuffer::new();
     let res = write!(&mut fmt, "{}", value);
     debug_assert_eq!(res, Ok(()));
@@ -163,7 +146,7 @@ pub fn encode_numeric_integer<S: ByteSink, T: Integer>(
 pub fn encode_numeric_float<S: ByteSink, T: Float>(
     encoder: &mut Encoder<S>,
     value: T,
-) -> Result<(), EncodeError<S::Error>> {
+) -> Result<(), S::Error> {
     // TODO: consider validating the range?
     if value.is_finite() {
         let mut fmt: ArrayBuffer<64> = ArrayBuffer::new();
@@ -187,10 +170,7 @@ pub fn encode_numeric_float<S: ByteSink, T: Float>(
 /// Encodes an ASCII string into bytes according to IEEE 488.2.
 ///
 /// Reference: IEEE 488.2: 7.7.5 - \<STRING PROGRAM DATA\>
-pub fn encode_string<S: ByteSink>(
-    encoder: &mut Encoder<S>,
-    data: &str,
-) -> Result<(), EncodeError<S::Error>> {
+pub fn encode_string<S: ByteSink>(encoder: &mut Encoder<S>, data: &str) -> Result<(), S::Error> {
     if data.as_bytes().iter().all(|ch| ch.is_ascii()) {
         // IEEE 488.2: 7.7.5.2 - Encoding syntax
         encoder.write_byte(b'"')?;
@@ -204,7 +184,7 @@ pub fn encode_string<S: ByteSink>(
         encoder.write_byte(b'"')?;
         Ok(())
     } else {
-        Err(EncodeError::NonAsciiString)
+        Err(EncodeError::NonAsciiString.into())
     }
 }
 
@@ -214,7 +194,7 @@ pub fn encode_string<S: ByteSink>(
 pub fn encode_definite_block<S: ByteSink>(
     encoder: &mut Encoder<S>,
     data: &[u8],
-) -> Result<(), EncodeError<S::Error>> {
+) -> Result<(), S::Error> {
     let mut fmt: ArrayBuffer<11> = ArrayBuffer::new();
 
     // IEEE 488.2: 7.7.6.2 - Encoding syntax

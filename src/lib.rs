@@ -31,12 +31,13 @@
 //! * `ArbitraryAscii`: IEEE 488.2 arbitrary ascii response data
 //! * `ResponseList`: elements parsed from separate comma-delimited response data values
 
-use core::{fmt, str};
-use std::io;
+use core::str;
+
+use encode::EncodeError;
 
 use crate::{
     decode::{DecodeError, Decoder},
-    encode::{EncodeError, Encoder},
+    encode::Encoder,
 };
 pub use crate::{
     ieee::types::*,
@@ -61,39 +62,43 @@ mod utils;
 
 /// A source of bytes
 pub trait ByteSource {
-    type Error: fmt::Debug + fmt::Display;
+    type Error: From<DecodeError>;
     fn read_byte(&mut self) -> Result<u8, Self::Error>;
 }
 
-impl<T> ByteSource for T
-where
-    T: io::Read,
-{
-    type Error = io::Error;
+impl<'a> ByteSource for &'a [u8] {
+    type Error = DecodeError;
 
     fn read_byte(&mut self) -> Result<u8, Self::Error> {
-        let mut buf = [0; 1];
-        self.read_exact(&mut buf)?;
-        Ok(buf[0])
+        if self.len() == 0 {
+            Err(DecodeError::UnexpectedEnd)
+        } else {
+            let (l, r) = self.split_at(1);
+            *self = r;
+            Ok(l[0])
+        }
     }
 }
 
 /// A sink for bytes
 pub trait ByteSink {
-    type Error: fmt::Debug + fmt::Display;
+    type Error: From<EncodeError>;
     fn write_byte(&mut self, byte: u8) -> Result<(), Self::Error> {
         self.write_bytes(&[byte])
     }
     fn write_bytes(&mut self, bytes: &[u8]) -> Result<(), Self::Error>;
 }
 
-impl<T> ByteSink for T
-where
-    T: io::Write,
-{
-    type Error = io::Error;
+impl ByteSink for Vec<u8> {
+    type Error = EncodeError;
+
+    fn write_byte(&mut self, byte: u8) -> Result<(), Self::Error> {
+        self.push(byte);
+        Ok(())
+    }
     fn write_bytes(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
-        self.write_all(bytes)
+        self.extend(bytes);
+        Ok(())
     }
 }
 
@@ -102,7 +107,7 @@ pub trait Command {
     type ProgramData: ProgramData;
     fn mnemonic(&self) -> &str;
     fn program_data(&self) -> Option<Self::ProgramData>;
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), EncodeError<S::Error>> {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_message_unit()?;
         encoder.write_bytes(self.mnemonic().as_bytes())?;
         if let Some(program_data) = self.program_data() {
@@ -118,7 +123,7 @@ pub trait Query {
     type ResponseData: ResponseData;
     fn mnemonic(&self) -> &str;
     fn program_data(&self) -> Option<Self::ProgramData>;
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), EncodeError<S::Error>> {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_message_unit()?;
         encoder.write_bytes(self.mnemonic().as_bytes())?;
         if let Some(program_data) = self.program_data() {
@@ -129,7 +134,7 @@ pub trait Query {
     fn decode<S: ByteSource>(
         &self,
         decoder: &mut Decoder<S>,
-    ) -> Result<Self::ResponseData, DecodeError<S::Error>> {
+    ) -> Result<Self::ResponseData, S::Error> {
         Self::ResponseData::decode(decoder)
     }
 }

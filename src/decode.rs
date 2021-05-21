@@ -11,40 +11,25 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub enum DecodeError<E>
-where
-    E: fmt::Debug + fmt::Display,
-{
+pub enum DecodeError {
     Parse,
+    UnexpectedEnd,
     InvalidDecodeState(DecodeState),
-    Other(E),
 }
 
-impl<T> fmt::Display for DecodeError<T>
-where
-    T: fmt::Debug + fmt::Display,
-{
+impl fmt::Display for DecodeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             DecodeError::Parse => write!(f, "parse error"),
+            DecodeError::UnexpectedEnd => write!(f, "unexpected end"),
             DecodeError::InvalidDecodeState(state) => {
                 write!(f, "invalid decode state ({:?})", state)
             }
-            DecodeError::Other(err) => fmt::Display::fmt(err, f),
         }
     }
 }
 
-impl<T> Error for DecodeError<T> where T: fmt::Debug + fmt::Display {}
-
-impl<T> From<T> for DecodeError<T>
-where
-    T: fmt::Debug + fmt::Display,
-{
-    fn from(err: T) -> DecodeError<T> {
-        DecodeError::Other(err)
-    }
-}
+impl Error for DecodeError {}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum DecodeState {
@@ -76,7 +61,7 @@ impl<S: ByteSource> Decoder<S> {
             peeked: None,
         }
     }
-    pub fn read_byte(&mut self) -> Result<u8, DecodeError<S::Error>> {
+    pub fn read_byte(&mut self) -> Result<u8, S::Error> {
         if let Some(byte) = self.peeked.take() {
             Ok(byte)
         } else {
@@ -84,7 +69,7 @@ impl<S: ByteSource> Decoder<S> {
             Ok(byte)
         }
     }
-    pub fn peek_byte(&mut self) -> Result<u8, DecodeError<S::Error>> {
+    pub fn peek_byte(&mut self) -> Result<u8, S::Error> {
         if let Some(byte) = self.peeked {
             Ok(byte)
         } else {
@@ -93,7 +78,7 @@ impl<S: ByteSource> Decoder<S> {
             Ok(byte)
         }
     }
-    fn skip_whitespace(&mut self) -> Result<(), DecodeError<S::Error>> {
+    fn skip_whitespace(&mut self) -> Result<(), S::Error> {
         self.peeked = Some(loop {
             match self.read_byte()? {
                 // Reference: IEEE 488.2 7.4.1.2 - Encoding Syntax
@@ -103,17 +88,17 @@ impl<S: ByteSource> Decoder<S> {
         });
         Ok(())
     }
-    pub fn begin_response_data(&mut self) -> Result<(), DecodeError<S::Error>> {
+    pub fn begin_response_data(&mut self) -> Result<(), S::Error> {
         match self.state {
             DecodeState::Initial | DecodeState::DataExpected | DecodeState::MessageUnitExpected => {
                 self.skip_whitespace()?;
                 self.state = DecodeState::Data;
                 Ok(())
             }
-            _ => Err(DecodeError::InvalidDecodeState(self.state)),
+            _ => Err(DecodeError::InvalidDecodeState(self.state).into()),
         }
     }
-    pub fn end_with(&mut self, byte: u8) -> Result<(), DecodeError<S::Error>> {
+    pub fn end_with(&mut self, byte: u8) -> Result<(), S::Error> {
         self.state = match self.state {
             DecodeState::Data => match byte {
                 // Reference: IEEE 488.2: 8.5 - \<RESPONSE MESSAGE TERMINATOR\>
@@ -122,77 +107,77 @@ impl<S: ByteSource> Decoder<S> {
                 b';' => DecodeState::MessageUnitExpected,
                 // Reference: IEEE 488.2: 8.4.2 - \<RESPONSE DATA SEPARATOR\>
                 b',' => DecodeState::DataExpected,
-                _ => return Err(DecodeError::InvalidDecodeState(self.state)),
+                _ => return Err(DecodeError::InvalidDecodeState(self.state))?,
             },
-            _ => return Err(DecodeError::InvalidDecodeState(self.state)),
+            _ => return Err(DecodeError::InvalidDecodeState(self.state))?,
         };
         Ok(())
     }
     pub fn is_at_end(&self) -> bool {
         self.state == DecodeState::End
     }
-    pub fn finish(self) -> Result<(), DecodeError<S::Error>> {
+    pub fn finish(self) -> Result<(), S::Error> {
         match self.state {
             DecodeState::End => Ok(()),
-            _ => Err(DecodeError::InvalidDecodeState(self.state)),
+            _ => Err(DecodeError::InvalidDecodeState(self.state).into()),
         }
     }
 }
 
 #[inline]
-fn sign<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, DecodeError<S::Error>> {
+fn sign<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
     match decoder.read_byte()? {
         byte @ b'-' | byte @ b'+' => Ok(byte),
-        _ => Err(DecodeError::Parse),
+        _ => Err(DecodeError::Parse.into()),
     }
 }
 
 #[inline]
-fn digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, DecodeError<S::Error>> {
+fn digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
     match decoder.read_byte()? {
         byte @ b'0'..=b'9' => Ok(byte),
-        _ => Err(DecodeError::Parse),
+        _ => Err(DecodeError::Parse.into()),
     }
 }
 
 #[inline]
-fn hex_digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, DecodeError<S::Error>> {
+fn hex_digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
     match decoder.read_byte()? {
         byte @ b'A'..=b'F' => Ok(byte),
         byte @ b'0'..=b'9' => Ok(byte),
-        _ => Err(DecodeError::Parse),
+        _ => Err(DecodeError::Parse.into()),
     }
 }
 
 #[inline]
-fn octal_digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, DecodeError<S::Error>> {
+fn octal_digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
     match decoder.read_byte()? {
         byte @ b'0'..=b'7' => Ok(byte),
-        _ => Err(DecodeError::Parse),
+        _ => Err(DecodeError::Parse.into()),
     }
 }
 
 #[inline]
-fn binary_digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, DecodeError<S::Error>> {
+fn binary_digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
     match decoder.read_byte()? {
         byte @ b'0'..=b'1' => Ok(byte),
-        _ => Err(DecodeError::Parse),
+        _ => Err(DecodeError::Parse.into()),
     }
 }
 
 #[inline]
-fn upper<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, DecodeError<S::Error>> {
+fn upper<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
     match decoder.read_byte()? {
         byte @ b'A'..=b'Z' => Ok(byte),
-        _ => Err(DecodeError::Parse),
+        _ => Err(DecodeError::Parse.into()),
     }
 }
 
 #[inline]
-fn quote<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, DecodeError<S::Error>> {
+fn quote<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
     match decoder.read_byte()? {
         byte @ b'"' => Ok(byte),
-        _ => Err(DecodeError::Parse),
+        _ => Err(DecodeError::Parse.into()),
     }
 }
 
@@ -202,7 +187,7 @@ fn quote<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, DecodeError<S::E
 pub fn decode_characters<S: ByteSource, T: fmt::Write>(
     decoder: &mut Decoder<S>,
     target: &mut T,
-) -> Result<(), DecodeError<S::Error>> {
+) -> Result<(), S::Error> {
     target
         .write_char(upper(decoder)? as char)
         .map_err(|_| DecodeError::Parse)?;
@@ -218,7 +203,7 @@ pub fn decode_characters<S: ByteSource, T: fmt::Write>(
 
 #[test]
 fn test_characters() {
-    let test = |bytes: &'static [u8]| -> Result<String, DecodeError<std::io::Error>> {
+    let test = |bytes: &'static [u8]| -> Result<String, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut result = String::new();
@@ -240,7 +225,7 @@ fn test_characters() {
 /// - IEEE 488.2: 8.7.7 - \<BINARY NUMERIC RESPONSE DATA\>
 pub fn decode_numeric_integer<S: ByteSource, T: Integer>(
     decoder: &mut Decoder<S>,
-) -> Result<T, DecodeError<S::Error>> {
+) -> Result<T, S::Error> {
     let mut buf = String::new();
     match decoder.read_byte()? {
         byte @ b'+' | byte @ b'-' => {
@@ -256,7 +241,8 @@ pub fn decode_numeric_integer<S: ByteSource, T: Integer>(
                         byte @ b'0'..=b'9' => buf.push(byte as char),
                         byte => {
                             decoder.end_with(byte)?;
-                            break T::from_str_radix(&buf, 16).map_err(|_| DecodeError::Parse);
+                            break T::from_str_radix(&buf, 16)
+                                .map_err(|_| DecodeError::Parse.into());
                         }
                     }
                 };
@@ -268,7 +254,8 @@ pub fn decode_numeric_integer<S: ByteSource, T: Integer>(
                         byte @ b'0'..=b'7' => buf.push(byte as char),
                         byte => {
                             decoder.end_with(byte)?;
-                            break T::from_str_radix(&buf, 8).map_err(|_| DecodeError::Parse);
+                            break T::from_str_radix(&buf, 8)
+                                .map_err(|_| DecodeError::Parse.into());
                         }
                     }
                 };
@@ -280,22 +267,23 @@ pub fn decode_numeric_integer<S: ByteSource, T: Integer>(
                         byte @ b'0' | byte @ b'1' => buf.push(byte as char),
                         byte => {
                             decoder.end_with(byte)?;
-                            break T::from_str_radix(&buf, 2).map_err(|_| DecodeError::Parse);
+                            break T::from_str_radix(&buf, 2)
+                                .map_err(|_| DecodeError::Parse.into());
                         }
                     }
                 };
             }
-            _ => return Err(DecodeError::Parse),
+            _ => return Err(DecodeError::Parse)?,
         },
         byte @ b'0'..=b'9' => buf.push(byte as char),
-        _ => return Err(DecodeError::Parse),
+        _ => return Err(DecodeError::Parse)?,
     }
     loop {
         match decoder.read_byte()? {
             byte @ b'0'..=b'9' => buf.push(byte as char),
             byte => {
                 decoder.end_with(byte)?;
-                break T::from_str_radix(&buf, 10).map_err(|_| DecodeError::Parse);
+                break T::from_str_radix(&buf, 10).map_err(|_| DecodeError::Parse.into());
             }
         }
     }
@@ -338,7 +326,7 @@ fn test_numeric_i8() {
 /// - IEEE 488.2: 8.7.4 - \<NR3 NUMERIC RESPONSE DATA\>
 pub fn decode_numeric_float<S: ByteSource, T: Float>(
     decoder: &mut Decoder<S>,
-) -> Result<T, DecodeError<S::Error>> {
+) -> Result<T, S::Error> {
     let mut buf = String::new();
     match decoder.read_byte()? {
         byte @ b'+' | byte @ b'-' => {
@@ -346,13 +334,13 @@ pub fn decode_numeric_float<S: ByteSource, T: Float>(
             buf.push(digit(decoder)? as char);
         }
         byte @ b'0'..=b'9' => buf.push(byte as char),
-        _ => return Err(DecodeError::Parse),
+        _ => return Err(DecodeError::Parse.into()),
     };
     loop {
         match decoder.read_byte()? {
             byte @ b'0'..=b'9' => buf.push(byte as char),
             byte @ b'.' => break buf.push(byte as char),
-            _ => return Err(DecodeError::Parse),
+            _ => return Err(DecodeError::Parse.into()),
         }
     }
     loop {
@@ -361,7 +349,7 @@ pub fn decode_numeric_float<S: ByteSource, T: Float>(
             byte @ b'E' => break buf.push(byte as char),
             byte => {
                 decoder.end_with(byte)?;
-                return T::from_str(&buf).map_err(|_| DecodeError::Parse);
+                return T::from_str(&buf).map_err(|_| DecodeError::Parse.into());
             }
         }
     }
@@ -372,7 +360,7 @@ pub fn decode_numeric_float<S: ByteSource, T: Float>(
             byte @ b'0'..=b'9' => buf.push(byte as char),
             byte => {
                 decoder.end_with(byte)?;
-                break T::from_str(&buf).map_err(|_| DecodeError::Parse);
+                break T::from_str(&buf).map_err(|_| DecodeError::Parse.into());
             }
         }
     }
@@ -401,7 +389,7 @@ fn test_numeric_f32() {
 pub fn decode_string<S: ByteSource, T: fmt::Write>(
     decoder: &mut Decoder<S>,
     target: &mut T,
-) -> Result<(), DecodeError<S::Error>> {
+) -> Result<(), S::Error> {
     quote(decoder)?;
     loop {
         match decoder.read_byte()? {
@@ -412,14 +400,14 @@ pub fn decode_string<S: ByteSource, T: fmt::Write>(
             byte if byte.is_ascii() => target
                 .write_char(byte as char)
                 .map_err(|_| DecodeError::Parse)?,
-            _ => break Err(DecodeError::Parse),
+            _ => break Err(DecodeError::Parse.into()),
         }
     }
 }
 
 #[test]
 fn test_string() {
-    let test = |bytes: &'static [u8]| -> Result<String, DecodeError<std::io::Error>> {
+    let test = |bytes: &'static [u8]| -> Result<String, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut result = String::new();
@@ -441,10 +429,10 @@ fn test_string() {
 pub fn decode_arbitrary_block<S: ByteSource, T: ByteSink>(
     decoder: &mut Decoder<S>,
     target: &mut T,
-) -> Result<(), DecodeError<S::Error>> {
+) -> Result<(), S::Error> {
     match decoder.read_byte()? {
         b'#' => (),
-        _ => return Err(DecodeError::Parse),
+        _ => return Err(DecodeError::Parse.into()),
     }
     match decoder.read_byte()? {
         byte @ b'1'..=b'9' => {
@@ -473,13 +461,13 @@ pub fn decode_arbitrary_block<S: ByteSource, T: ByteSink>(
                 byte => target.write_byte(byte).map_err(|_| DecodeError::Parse)?,
             }
         },
-        _ => Err(DecodeError::Parse),
+        _ => Err(DecodeError::Parse.into()),
     }
 }
 
 #[test]
 fn test_arbitrary_block() {
-    let test = |bytes: &'static [u8]| -> Result<Vec<u8>, DecodeError<std::io::Error>> {
+    let test = |bytes: &'static [u8]| -> Result<Vec<u8>, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut result = Vec::new();
@@ -499,14 +487,14 @@ fn test_arbitrary_block() {
 pub fn decode_arbitrary_ascii<S: ByteSource, T: fmt::Write>(
     decoder: &mut Decoder<S>,
     target: &mut T,
-) -> Result<(), DecodeError<S::Error>> {
+) -> Result<(), S::Error> {
     loop {
         match decoder.read_byte()? {
             byte @ b'\n' => break decoder.end_with(byte),
             byte if byte.is_ascii() => target
                 .write_char(byte as char)
                 .map_err(|_| DecodeError::Parse)?,
-            _ => break Err(DecodeError::Parse),
+            _ => break Err(DecodeError::Parse.into()),
         }
     }
 }
@@ -517,9 +505,7 @@ pub fn decode_arbitrary_ascii<S: ByteSource, T: fmt::Write>(
 /// responses tend to use NR1 numerical literals 0 and 1, which match the SCPI boolean format spec.
 ///
 /// Reference: SCPI 1999.0: 7.3 - Boolean Program Data
-pub fn decode_boolean<S: ByteSource>(
-    decoder: &mut Decoder<S>,
-) -> Result<bool, DecodeError<S::Error>> {
+pub fn decode_boolean<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<bool, S::Error> {
     match decoder.read_byte()? {
         b'0' => {
             let byte = decoder.read_byte()?;
@@ -531,6 +517,6 @@ pub fn decode_boolean<S: ByteSource>(
             decoder.end_with(byte)?;
             Ok(true)
         }
-        _ => Err(DecodeError::Parse),
+        _ => Err(DecodeError::Parse.into()),
     }
 }

@@ -12,94 +12,94 @@ use crate::{
 
 /// Trait for types that can be parsed from IEEE/SCPI response bytes
 pub trait ResponseData: Sized {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>>;
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error>;
 }
 
 impl ResponseData for bool {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_boolean(decoder)
     }
 }
 
 impl ResponseData for u8 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 impl ResponseData for u16 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 impl ResponseData for u32 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 impl ResponseData for u64 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 impl ResponseData for usize {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 
 impl ResponseData for i8 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 impl ResponseData for i16 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 impl ResponseData for i32 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 impl ResponseData for i64 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 impl ResponseData for isize {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_integer(decoder)
     }
 }
 
 impl ResponseData for f32 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_float(decoder)
     }
 }
 
 impl ResponseData for f64 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         decode_numeric_float(decoder)
     }
 }
 
 impl ResponseData for String {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         let mut text = String::new();
         decode_string(decoder, &mut text)?;
@@ -108,7 +108,7 @@ impl ResponseData for String {
 }
 
 impl ResponseData for Vec<u8> {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         let mut result = Vec::new();
         decode_arbitrary_block(decoder, &mut result)?;
@@ -121,7 +121,7 @@ where
     A: ResponseData,
     B: ResponseData,
 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         let a = A::decode(decoder)?;
         let b = B::decode(decoder)?;
         Ok((a, b))
@@ -134,7 +134,7 @@ where
     B: ResponseData,
     C: ResponseData,
 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         let a = A::decode(decoder)?;
         let b = B::decode(decoder)?;
         let c = C::decode(decoder)?;
@@ -149,7 +149,7 @@ where
     C: ResponseData,
     D: ResponseData,
 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         let a = A::decode(decoder)?;
         let b = B::decode(decoder)?;
         let c = C::decode(decoder)?;
@@ -171,7 +171,7 @@ impl From<ArbitraryAscii> for String {
 }
 
 impl ResponseData for ArbitraryAscii {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         let mut text = String::new();
         decode_arbitrary_ascii(decoder, &mut text)?;
@@ -187,7 +187,7 @@ impl<T> ResponseData for ResponseList<T>
 where
     T: ResponseData,
 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         let mut result = Vec::new();
         loop {
             result.push(T::decode(decoder)?);
@@ -207,10 +207,10 @@ impl<T> ResponseData for T
 where
     T: CharacterResponseData,
 {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         decoder.begin_response_data()?;
         let mut text = String::new();
         decode_arbitrary_ascii(decoder, &mut text)?;
-        T::parse(&text).ok_or(DecodeError::Parse)
+        T::parse(&text).ok_or_else(|| DecodeError::Parse.into())
     }
 }

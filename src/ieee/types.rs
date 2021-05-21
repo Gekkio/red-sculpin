@@ -6,7 +6,7 @@ use bitflags::bitflags;
 
 use crate::{
     decode::{DecodeError, Decoder},
-    encode::{EncodeError, Encoder},
+    encode::Encoder,
     program_data::ProgramData,
     response_data::ResponseData,
     ArbitraryAscii, ByteSink, ByteSource,
@@ -54,9 +54,9 @@ impl DeviceIdentification {
 }
 
 impl ResponseData for DeviceIdentification {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         let text: String = ArbitraryAscii::decode(decoder)?.into();
-        DeviceIdentification::from_response(&text).ok_or(DecodeError::Parse)
+        DeviceIdentification::from_response(&text).ok_or_else(|| DecodeError::Parse.into())
     }
 }
 
@@ -69,7 +69,7 @@ impl ResponseData for DeviceIdentification {
 pub struct MacroList(pub Vec<String>);
 
 impl ResponseData for MacroList {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         let mut labels = Vec::new();
         let first = String::decode(decoder)?;
         if first.is_empty() {
@@ -127,15 +127,15 @@ bitflags! {
 }
 
 impl ProgramData for StandardEventStatus {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), EncodeError<S::Error>> {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         self.bits().encode(encoder)
     }
 }
 
 impl ResponseData for StandardEventStatus {
-    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, DecodeError<S::Error>> {
+    fn decode<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<Self, S::Error> {
         let value = u16::decode(decoder)?;
-        StandardEventStatus::from_bits(value).ok_or(DecodeError::Parse)
+        StandardEventStatus::from_bits(value).ok_or_else(|| DecodeError::Parse.into())
     }
 }
 
