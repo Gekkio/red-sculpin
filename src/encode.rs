@@ -7,7 +7,7 @@ use std::error::Error;
 
 use crate::{
     internal::{ArrayBuffer, Float, Integer},
-    ByteSink,
+    is_program_mnemonic, ByteSink,
 };
 
 #[derive(Debug)]
@@ -122,87 +122,91 @@ impl<S: ByteSink> Encoder<S> {
         self.end_message()?;
         Ok(self.sink)
     }
-}
-
-/// Encodes an integer value into bytes according to IEEE 488.2.
-///
-/// Reference: IEEE 488.2: 7.7.2 - \<DECIMAL NUMERIC PROGRAM DATA\>
-pub fn encode_numeric_integer<S: ByteSink, T: Integer>(
-    encoder: &mut Encoder<S>,
-    value: T,
-) -> Result<(), S::Error> {
-    let mut fmt: ArrayBuffer<32> = ArrayBuffer::new();
-    let res = write!(&mut fmt, "{}", value);
-    debug_assert_eq!(res, Ok(()));
-    encoder.write_bytes(fmt.finish())?;
-    Ok(())
-}
-
-/// Encodes a floating point value into bytes according to SCPI 1999.0 / IEEE 488.2.
-///
-/// References:
-///   - IEEE 488.2: 7.7.2 - \<DECIMAL NUMERIC PROGRAM DATA\>
-///   - SCPI 1999.0: 7.2 - Decimal Numeric Program Data
-pub fn encode_numeric_float<S: ByteSink, T: Float>(
-    encoder: &mut Encoder<S>,
-    value: T,
-) -> Result<(), S::Error> {
-    // TODO: consider validating the range?
-    if value.is_finite() {
-        let mut fmt: ArrayBuffer<64> = ArrayBuffer::new();
-        let res = write!(&mut fmt, "{:E}", value);
-        debug_assert_eq!(res, Ok(()));
-        encoder.write_bytes(fmt.finish())?;
-    } else if value.is_nan() {
-        // SCPI 1999.0: 7.2.1.5 - Not A Number (NAN)
-        encoder.write_bytes(b"NAN")?;
-    } else {
-        // SCPI 1999.0: 7.2.1.4 - INFinity and Negative INFinity (NINF)
-        if value.is_sign_positive() {
-            encoder.write_bytes(b"INF")?;
-        } else {
-            encoder.write_bytes(b"NINF")?;
-        }
+    /// Encodes a boolean into program data bytes.
+    ///
+    /// Reference: SCPI 1999.0: 7.3 - Boolean Program Data
+    pub fn encode_boolean(&mut self, value: bool) -> Result<(), S::Error> {
+        self.write_byte(match value {
+            true => b'1',
+            false => b'0',
+        })
     }
-    Ok(())
-}
-
-/// Encodes an ASCII string into bytes according to IEEE 488.2.
-///
-/// Reference: IEEE 488.2: 7.7.5 - \<STRING PROGRAM DATA\>
-pub fn encode_string<S: ByteSink>(encoder: &mut Encoder<S>, data: &str) -> Result<(), S::Error> {
-    if data.as_bytes().iter().all(|ch| ch.is_ascii()) {
-        // IEEE 488.2: 7.7.5.2 - Encoding syntax
-        encoder.write_byte(b'"')?;
-        let mut chunk_iter = data.as_bytes().split(|&ch| ch == b'"').peekable();
-        while let Some(chunk) = chunk_iter.next() {
-            encoder.write_bytes(chunk)?;
-            if chunk_iter.peek().is_some() {
-                encoder.write_bytes(b"\"\"")?;
+    /// Encodes a string value into character program data bytes.
+    ///
+    /// Reference: IEEE 488.2: 7.7.1 - \<CHARACTER PROGRAM DATA\>
+    pub fn encode_characters(&mut self, value: &str) -> Result<(), S::Error> {
+        debug_assert!(
+            is_program_mnemonic(value),
+            "expected {} to be a valid program mnemonic",
+            value
+        );
+        self.write_bytes(value.as_bytes())
+    }
+    /// Encodes an integer value into decimal numeric program data bytes.
+    ///
+    /// Reference: IEEE 488.2: 7.7.2 - \<DECIMAL NUMERIC PROGRAM DATA\>
+    pub fn encode_numeric_integer<T: Integer>(&mut self, value: T) -> Result<(), S::Error> {
+        let mut fmt: ArrayBuffer<32> = ArrayBuffer::new();
+        let res = write!(&mut fmt, "{}", value);
+        debug_assert_eq!(res, Ok(()));
+        self.write_bytes(fmt.finish())
+    }
+    /// Encodes a floating point value into decimal numeric program data bytes.
+    ///
+    /// References:
+    ///   - IEEE 488.2: 7.7.2 - \<DECIMAL NUMERIC PROGRAM DATA\>
+    ///   - SCPI 1999.0: 7.2 - Decimal Numeric Program Data
+    pub fn encode_numeric_float<T: Float>(&mut self, value: T) -> Result<(), S::Error> {
+        // TODO: consider validating the range?
+        if value.is_finite() {
+            let mut fmt: ArrayBuffer<64> = ArrayBuffer::new();
+            let res = write!(&mut fmt, "{:E}", value);
+            debug_assert_eq!(res, Ok(()));
+            self.write_bytes(fmt.finish())
+        } else if value.is_nan() {
+            // SCPI 1999.0: 7.2.1.5 - Not A Number (NAN)
+            self.write_bytes(b"NAN")
+        } else {
+            // SCPI 1999.0: 7.2.1.4 - INFinity and Negative INFinity (NINF)
+            if value.is_sign_positive() {
+                self.write_bytes(b"INF")
+            } else {
+                self.write_bytes(b"NINF")
             }
         }
-        encoder.write_byte(b'"')?;
-        Ok(())
-    } else {
-        Err(EncodeError::NonAsciiString.into())
     }
-}
+    /// Encodes an ASCII string into IEEE 488.2 string program data bytes.
+    ///
+    /// Reference: IEEE 488.2: 7.7.5 - \<STRING PROGRAM DATA\>
+    pub fn encode_string(&mut self, data: &str) -> Result<(), S::Error> {
+        if data.as_bytes().iter().all(|ch| ch.is_ascii()) {
+            // IEEE 488.2: 7.7.5.2 - Encoding syntax
+            self.write_byte(b'"')?;
+            let mut chunk_iter = data.as_bytes().split(|&ch| ch == b'"').peekable();
+            while let Some(chunk) = chunk_iter.next() {
+                self.write_bytes(chunk)?;
+                if chunk_iter.peek().is_some() {
+                    self.write_bytes(b"\"\"")?;
+                }
+            }
+            self.write_byte(b'"')
+        } else {
+            Err(EncodeError::NonAsciiString.into())
+        }
+    }
+    /// Encodes a slice of bytes into IEEE 488.2 definite length arbitrary block bytes.
+    ///
+    /// Reference: IEEE 488.2: 7.7.6 - \<ARBITRARY BLOCK PROGRAM DATA\>
+    pub fn encode_definite_block(&mut self, data: &[u8]) -> Result<(), S::Error> {
+        let mut fmt: ArrayBuffer<11> = ArrayBuffer::new();
 
-/// Encodes a slice of bytes into definite arbitrary block bytes according to IEEE 488.2.
-///
-/// Reference: IEEE 488.2: 7.7.6 - \<ARBITRARY BLOCK PROGRAM DATA\>
-pub fn encode_definite_block<S: ByteSink>(
-    encoder: &mut Encoder<S>,
-    data: &[u8],
-) -> Result<(), S::Error> {
-    let mut fmt: ArrayBuffer<11> = ArrayBuffer::new();
-
-    // IEEE 488.2: 7.7.6.2 - Encoding syntax
-    write!(&mut fmt, "#0{}", data.len()).map_err(|_| EncodeError::BlockSizeOverflow(data.len()))?;
-    let header = fmt.finish();
-    let digits = header[2..].len();
-    header[1] = b'0' + (digits as u8);
-    encoder.write_bytes(header)?;
-    encoder.write_bytes(data)?;
-    Ok(())
+        // IEEE 488.2: 7.7.6.2 - Encoding syntax
+        write!(&mut fmt, "#0{}", data.len())
+            .map_err(|_| EncodeError::BlockSizeOverflow(data.len()))?;
+        let header = fmt.finish();
+        let digits = header[2..].len();
+        header[1] = b'0' + (digits as u8);
+        self.write_bytes(header)?;
+        self.write_bytes(data)
+    }
 }

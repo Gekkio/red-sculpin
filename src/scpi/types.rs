@@ -5,10 +5,7 @@
 use core::convert::TryFrom;
 
 use crate::{
-    decode::Decoder,
-    encode::Encoder,
-    program_data::{CharacterProgramData, ProgramData},
-    response_data::ResponseData,
+    decode::Decoder, encode::Encoder, program_data::ProgramData, response_data::ResponseData,
     ByteSink, ByteSource,
 };
 
@@ -18,10 +15,11 @@ use crate::{
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct DefaultValue;
 
-impl CharacterProgramData for DefaultValue {
-    fn program_mnemonic(&self) -> &str {
+impl ProgramData for DefaultValue {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+        encoder.begin_program_data()?;
         // Reference: `SCPI 1999.0: 7.2.1.1 - DEFault`
-        "DEF"
+        encoder.encode_characters("DEF")
     }
 }
 
@@ -34,13 +32,14 @@ pub enum Limit {
     Max,
 }
 
-impl CharacterProgramData for Limit {
-    fn program_mnemonic(&self) -> &str {
+impl ProgramData for Limit {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+        encoder.begin_program_data()?;
         // Reference: `SCPI 1999.0: 7.2.1.2 - MINimum|MAXimum`
-        match self {
+        encoder.encode_characters(match self {
             Limit::Min => "MIN",
             Limit::Max => "MAX",
-        }
+        })
     }
 }
 
@@ -53,13 +52,14 @@ pub enum Direction {
     Down,
 }
 
-impl CharacterProgramData for Direction {
-    fn program_mnemonic(&self) -> &str {
+impl ProgramData for Direction {
+    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+        encoder.begin_program_data()?;
         // Reference: `SCPI 1999.0: 7.2.1.3 - UP|DOWN`
-        match self {
+        encoder.encode_characters(match self {
             Direction::Up => "UP",
             Direction::Down => "DOWN",
-        }
+        })
     }
 }
 

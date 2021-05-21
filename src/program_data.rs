@@ -2,40 +2,12 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use crate::{
-    encode::{
-        encode_definite_block, encode_numeric_float, encode_numeric_integer, encode_string, Encoder,
-    },
-    is_program_mnemonic, ByteSink,
-};
+use crate::{encode::Encoder, ByteSink};
 
 /// Trait for types that can be used as IEEE/SCPI message program data
 pub trait ProgramData {
     /// Encodes this value as bytes into the given encoder.
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error>;
-}
-
-/// Trait for types that can be encoded as character program data.
-///
-/// Reference: IEEE 488.2: 7.7.1 - \<CHARACTER PROGRAM DATA\>
-pub trait CharacterProgramData {
-    fn program_mnemonic(&self) -> &str;
-}
-
-impl<T> ProgramData for T
-where
-    T: CharacterProgramData,
-{
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
-        encoder.begin_program_data()?;
-        let mnemonic = self.program_mnemonic();
-        debug_assert!(
-            is_program_mnemonic(mnemonic),
-            "expected {} to be a valid program mnemonic",
-            mnemonic
-        );
-        encoder.write_bytes(mnemonic.as_bytes())
-    }
 }
 
 /// A homogeneous list of program data values
@@ -75,129 +47,129 @@ where
 impl ProgramData for f32 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_float(encoder, *self)
+        encoder.encode_numeric_float(*self)
     }
 }
 
 impl ProgramData for f64 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_float(encoder, *self)
+        encoder.encode_numeric_float(*self)
     }
 }
 
 impl ProgramData for u8 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for u16 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for u32 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for u64 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for u128 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for usize {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 
 impl ProgramData for i8 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for i16 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for i32 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for i64 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for i128 {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for isize {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_numeric_integer(encoder, *self)
+        encoder.encode_numeric_integer(*self)
     }
 }
 
 impl<'a> ProgramData for &'a str {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_string(encoder, self)
+        encoder.encode_string(*self)
     }
 }
 
 impl ProgramData for str {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_string(encoder, self)
+        encoder.encode_string(self)
     }
 }
 
 impl<'a> ProgramData for &'a [u8] {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_definite_block(encoder, self)
+        encoder.encode_definite_block(*self)
     }
 }
 
 impl ProgramData for [u8] {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encode_definite_block(encoder, self)
+        encoder.encode_definite_block(self)
     }
 }
 
 impl ProgramData for bool {
     fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        // Reference: SCPI 1999.0: 7.3 - Boolean Program Data
-        encoder.write_byte(match self {
-            true => b'1',
-            false => b'0',
-        })?;
-        Ok(())
+        encoder.encode_boolean(*self)
     }
+}
+
+pub trait Encodable<T> {
+    type Error;
+    fn encode(&mut self, value: &T) -> Result<(), Self::Error>;
 }
 
 impl<A, B> ProgramData for (A, B)
