@@ -7,7 +7,7 @@ on:
   pull_request:
   push:
     branches:
-    - master
+    - main
 
 jobs:
   check:
@@ -56,7 +56,6 @@ jobs:
         rust:
           - stable
           - beta
-          - 1.36.0
         os:
           - ubuntu-latest
           - macos-latest
