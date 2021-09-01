@@ -116,9 +116,9 @@ impl<S: ByteSource> Decoder<S> {
     pub fn is_at_end(&self) -> bool {
         self.state == DecodeState::End
     }
-    pub fn finish(self) -> Result<(), S::Error> {
+    pub fn finish(self) -> Result<S, S::Error> {
         match self.state {
-            DecodeState::End => Ok(()),
+            DecodeState::End => Ok(self.source),
             _ => Err(DecodeError::InvalidDecodeState(self.state).into()),
         }
     }
@@ -203,7 +203,7 @@ pub fn decode_characters<S: ByteSource, T: fmt::Write>(
 
 #[test]
 fn test_characters() {
-    let test = |bytes: &'static [u8]| -> Result<String, DecodeError> {
+    let test = |bytes: &'static [u8]| -> Result<String, crate::Error> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut result = String::new();
@@ -407,7 +407,7 @@ pub fn decode_string<S: ByteSource, T: fmt::Write>(
 
 #[test]
 fn test_string() {
-    let test = |bytes: &'static [u8]| -> Result<String, DecodeError> {
+    let test = |bytes: &'static [u8]| -> Result<String, crate::Error> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut result = String::new();
@@ -467,7 +467,7 @@ pub fn decode_arbitrary_block<S: ByteSource, T: ByteSink>(
 
 #[test]
 fn test_arbitrary_block() {
-    let test = |bytes: &'static [u8]| -> Result<Vec<u8>, DecodeError> {
+    let test = |bytes: &'static [u8]| -> Result<Vec<u8>, crate::Error> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut result = Vec::new();

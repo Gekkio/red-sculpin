@@ -30,8 +30,31 @@
 //! * `String`: IEEE 488.2 string response data
 //! * `ArbitraryAscii`: IEEE 488.2 arbitrary ascii response data
 //! * `ResponseList`: elements parsed from separate comma-delimited response data values
+//!
+//! Examples:
+//!
+//! ```
+//! use red_sculpin::{decode::Decoder, encode::Encoder, scpi, Query};
+//! use std::net::TcpStream;
+//!
+//! fn query_system_version(stream: &TcpStream) -> Result<f32, red_sculpin::Error> {
+//!     let query = scpi::message::SystemVersionQuery; // :SYST:VERS?
+//!
+//!     let mut encoder = Encoder::new(stream);
+//!     query.encode(&mut encoder)?;
+//!     encoder.finish()?;
+//!
+//!     stream.flush()?;
+//!
+//!     let mut decoder = Decoder::new(stream);
+//!     let result = query.decode(&mut decoder)?;
+//!     decoder.finish()?;
+//!     Ok(result)
+//! }
+//! ```
 
-use core::str;
+use core::{fmt, str};
+use std::io::{self, Read, Write};
 
 use crate::{
     decode::{DecodeError, Decoder},
@@ -64,17 +87,16 @@ pub trait ByteSource {
     fn read_byte(&mut self) -> Result<u8, Self::Error>;
 }
 
-impl<'a> ByteSource for &'a [u8] {
-    type Error = DecodeError;
+impl<T> ByteSource for T
+where
+    T: Read,
+{
+    type Error = Error;
 
     fn read_byte(&mut self) -> Result<u8, Self::Error> {
-        if self.len() == 0 {
-            Err(DecodeError::UnexpectedEnd)
-        } else {
-            let (l, r) = self.split_at(1);
-            *self = r;
-            Ok(l[0])
-        }
+        let mut buf = [0];
+        self.read_exact(&mut buf)?;
+        Ok(buf[0])
     }
 }
 
@@ -87,20 +109,19 @@ pub trait ByteSink {
     fn write_bytes(&mut self, bytes: &[u8]) -> Result<(), Self::Error>;
 }
 
-impl ByteSink for Vec<u8> {
-    type Error = EncodeError;
+impl<T> ByteSink for T
+where
+    T: Write,
+{
+    type Error = Error;
 
-    fn write_byte(&mut self, byte: u8) -> Result<(), Self::Error> {
-        self.push(byte);
-        Ok(())
-    }
     fn write_bytes(&mut self, bytes: &[u8]) -> Result<(), Self::Error> {
-        self.extend(bytes);
+        self.write_all(bytes)?;
         Ok(())
     }
 }
 
-impl EncodeSink for Vec<u8> {}
+impl<T> EncodeSink for T where T: Write {}
 
 /// Trait for types that represent IEEE/SCPI commands
 pub trait Command {
@@ -136,5 +157,50 @@ pub trait Query {
         decoder: &mut Decoder<S>,
     ) -> Result<Self::ResponseData, S::Error> {
         Self::ResponseData::decode(decoder)
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    Encode(EncodeError),
+    Decode(DecodeError),
+    Io(io::Error),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::Encode(err) => fmt::Display::fmt(err, f),
+            Error::Decode(err) => fmt::Display::fmt(err, f),
+            Error::Io(err) => fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+impl From<EncodeError> for Error {
+    fn from(err: EncodeError) -> Self {
+        Error::Encode(err)
+    }
+}
+
+impl From<DecodeError> for Error {
+    fn from(err: DecodeError) -> Self {
+        Error::Decode(err)
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Error::Io(err)
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Encode(err) => Some(err),
+            Error::Decode(err) => Some(err),
+            Error::Io(err) => Some(err),
+        }
     }
 }

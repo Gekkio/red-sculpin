@@ -212,9 +212,9 @@ where
 }
 
 #[cfg(test)]
-fn encode_test<F: FnOnce(&mut Encoder<Vec<u8>>) -> Result<(), crate::encode::EncodeError>>(
+fn encode_test<F: FnOnce(&mut Encoder<Vec<u8>>) -> Result<(), crate::Error>>(
     f: F,
-) -> Result<Vec<u8>, crate::encode::EncodeError> {
+) -> Result<Vec<u8>, crate::Error> {
     let mut encoder = Encoder::new(Vec::new());
     encoder.begin_message_unit()?;
     encoder.write_bytes(b"TEST")?;
