@@ -195,19 +195,24 @@ impl<S: ByteSink> Encoder<S> {
             Err(EncodeError::NonAsciiString.into())
         }
     }
+    /// Encodes a IEEE 488.2 definite length arbitrary block header declaring the given length.
+    ///
+    /// Reference: IEEE 488.2: 7.7.6 - \<ARBITRARY BLOCK PROGRAM DATA\>
+    pub fn encode_definite_block_header(&mut self, len: usize) -> Result<(), S::Error> {
+        let mut fmt: ArrayBuffer<11> = ArrayBuffer::new();
+
+        // IEEE 488.2: 7.7.6.2 - Encoding syntax
+        write!(&mut fmt, "#0{}", len).map_err(|_| EncodeError::BlockSizeOverflow(len))?;
+        let header = fmt.finish();
+        let digits = header[2..].len();
+        header[1] = b'0' + (digits as u8);
+        self.write_bytes(header)
+    }
     /// Encodes a slice of bytes into IEEE 488.2 definite length arbitrary block bytes.
     ///
     /// Reference: IEEE 488.2: 7.7.6 - \<ARBITRARY BLOCK PROGRAM DATA\>
     pub fn encode_definite_block(&mut self, data: &[u8]) -> Result<(), S::Error> {
-        let mut fmt: ArrayBuffer<11> = ArrayBuffer::new();
-
-        // IEEE 488.2: 7.7.6.2 - Encoding syntax
-        write!(&mut fmt, "#0{}", data.len())
-            .map_err(|_| EncodeError::BlockSizeOverflow(data.len()))?;
-        let header = fmt.finish();
-        let digits = header[2..].len();
-        header[1] = b'0' + (digits as u8);
-        self.write_bytes(header)?;
+        self.encode_definite_block_header(data.len())?;
         self.write_bytes(data)
     }
 }
