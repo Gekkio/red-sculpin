@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use crate::{
-    declare_tuple_command, declare_tuple_query,
     ieee::types::{DeviceIdentification, MacroList, StandardEventStatus, StatusByte},
+    internal::{declare_tuple_command, declare_tuple_query},
     ArbitraryAscii, Command,
 };
 

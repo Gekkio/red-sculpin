@@ -8,6 +8,101 @@ use core::{
     str,
 };
 
+#[macro_use]
+mod macros {
+    macro_rules! declare_tuple_command {
+        ($(#[$attr:meta])* pub struct $name:ident<$l:lifetime, $mne:literal>;) => {
+            $(#[$attr])*
+            pub struct $name<$l>;
+
+            impl<$l> $crate::Command for $name<$l> {
+                type ProgramData = ();
+                fn mnemonic(&self) -> &str { $mne }
+                fn program_data(&self) -> Option<&Self::ProgramData> { None }
+            }
+        };
+        ($(#[$attr:meta])* pub struct $name:ident<$mne:literal>;) => {
+            $(#[$attr])*
+            pub struct $name;
+
+            impl $crate::Command for $name {
+                type ProgramData = ();
+                fn mnemonic(&self) -> &str { $mne }
+                fn program_data(&self) -> Option<Self::ProgramData> { None }
+            }
+        };
+        ($(#[$attr:meta])* pub struct $name:ident<$l:lifetime, $mne:literal>(pub $prog:ty);) => {
+            $(#[$attr])*
+            pub struct $name<$l>(pub $prog);
+
+            impl<$l> $crate::Command for $name<$l> {
+                type ProgramData = $prog;
+                fn mnemonic(&self) -> &str { $mne }
+                fn program_data(&self) -> Option<Self::ProgramData> { Some(self.0) }
+            }
+        };
+        ($(#[$attr:meta])* pub struct $name:ident<$mne:literal>(pub $prog:ty);) => {
+            $(#[$attr])*
+            pub struct $name(pub $prog);
+
+            impl $crate::Command for $name {
+                type ProgramData = $prog;
+                fn mnemonic(&self) -> &str { $mne }
+                fn program_data(&self) -> Option<Self::ProgramData> { Some(self.0) }
+            }
+        }
+    }
+
+    macro_rules! declare_tuple_query {
+        ($(#[$attr:meta])* pub struct $name:ident<$l:lifetime, $mne:literal, $res:ty>;) => {
+            $(#[$attr])*
+            pub struct $name<$li>;
+
+            impl<$l> $crate::Query for $name<$l> {
+                type ProgramData = ();
+                type ResponseData = $res;
+                fn mnemonic(&self) -> &str { $mne }
+                fn program_data(&self) -> Option<&Self::ProgramData> { None }
+            }
+        };
+        ($(#[$attr:meta])* pub struct $name:ident<$mne:literal, $res:ty>;) => {
+            $(#[$attr])*
+            pub struct $name;
+
+            impl $crate::Query for $name {
+                type ProgramData = ();
+                type ResponseData = $res;
+                fn mnemonic(&self) -> &str { $mne }
+                fn program_data(&self) -> Option<Self::ProgramData> { None }
+            }
+        };
+        ($(#[$attr:meta])* pub struct $name:ident<$l:lifetime, $mne:literal, $res:ty>(pub $prog:ty);) => {
+            $(#[$attr])*
+            pub struct $name<$l>(pub $prog);
+
+            impl<$l> $crate::Query for $name<$l> {
+                type ProgramData = $prog;
+                type ResponseData = $res;
+                fn mnemonic(&self) -> &str { $mne }
+                fn program_data(&self) -> Option<Self::ProgramData> { Some(self.0) }
+            }
+        };
+        ($(#[$attr:meta])* pub struct $name:ident<$mne:literal, $res:ty>(pub $prog:ty);) => {
+            $(#[$attr])*
+            pub struct $name(pub $prog);
+
+            impl $crate::Query for $name {
+                type ProgramData = $prog;
+                type ResponseData = $res;
+                fn mnemonic(&self) -> &str { $mne }
+                fn program_data(&self) -> Option<Self::ProgramData> { Some(self.0) }
+            }
+        }
+    }
+}
+pub(crate) use declare_tuple_command;
+pub(crate) use declare_tuple_query;
+
 pub struct ArrayBuffer<const LEN: usize> {
     buffer: [u8; LEN],
     written: usize,

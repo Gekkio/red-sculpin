@@ -2,7 +2,10 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use crate::{declare_tuple_command, declare_tuple_query, scpi::types::SystemErrorResponse};
+use crate::{
+    internal::{declare_tuple_command, declare_tuple_query},
+    scpi::types::SystemErrorResponse,
+};
 
 // Mandatory SCPI 1999.0 commands
 
