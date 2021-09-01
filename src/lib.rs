@@ -127,13 +127,11 @@ impl<T> EncodeSink for T where T: Write {}
 pub trait Command {
     type ProgramData: ProgramData;
     fn mnemonic(&self) -> &str;
-    fn program_data(&self) -> Option<Self::ProgramData>;
+    fn program_data(&self) -> Self::ProgramData;
     fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_message_unit()?;
         encoder.write_bytes(self.mnemonic().as_bytes())?;
-        if let Some(program_data) = self.program_data() {
-            program_data.encode(encoder)?;
-        }
+        self.program_data().encode(encoder)?;
         Ok(())
     }
 }
@@ -143,13 +141,11 @@ pub trait Query {
     type ProgramData: ProgramData;
     type ResponseData: ResponseData;
     fn mnemonic(&self) -> &str;
-    fn program_data(&self) -> Option<Self::ProgramData>;
+    fn program_data(&self) -> Self::ProgramData;
     fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_message_unit()?;
         encoder.write_bytes(self.mnemonic().as_bytes())?;
-        if let Some(program_data) = self.program_data() {
-            program_data.encode(encoder)?;
-        }
+        self.program_data().encode(encoder)?;
         Ok(())
     }
     fn decode<S: ByteSource>(

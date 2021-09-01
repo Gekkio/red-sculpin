@@ -172,8 +172,8 @@ impl<'a> Command for DefineMacro<'a> {
         "*DMC"
     }
 
-    fn program_data(&self) -> Option<Self::ProgramData> {
-        Some((self.name, self.data))
+    fn program_data(&self) -> Self::ProgramData {
+        (self.name, self.data)
     }
 }
 
@@ -241,8 +241,8 @@ impl Command for PassControlBack {
         "*PCB"
     }
 
-    fn program_data(&self) -> Option<Self::ProgramData> {
-        Some((self.primary_addr, self.secondary_addr))
+    fn program_data(&self) -> Self::ProgramData {
+        (self.primary_addr, self.secondary_addr)
     }
 }
 
