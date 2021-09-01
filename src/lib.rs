@@ -44,8 +44,6 @@
 //!     query.encode(&mut encoder)?;
 //!     encoder.finish()?;
 //!
-//!     stream.flush()?;
-//!
 //!     let mut decoder = Decoder::new(stream);
 //!     let result = query.decode(&mut decoder)?;
 //!     decoder.finish()?;
