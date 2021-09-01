@@ -13,6 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub enum EncodeError {
     NonAsciiString,
+    InvalidCharacterData,
     BlockSizeOverflow(usize),
     InvalidEncodeState(EncodeState),
 }
@@ -20,6 +21,7 @@ pub enum EncodeError {
 impl fmt::Display for EncodeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            EncodeError::InvalidCharacterData => write!(f, "invalid character data"),
             EncodeError::NonAsciiString => write!(f, "invalid non-ascii string"),
             EncodeError::BlockSizeOverflow(size) => {
                 write!(f, "block size {} overflows protocol limit", size)
@@ -135,12 +137,11 @@ impl<S: ByteSink> Encoder<S> {
     ///
     /// Reference: IEEE 488.2: 7.7.1 - \<CHARACTER PROGRAM DATA\>
     pub fn encode_characters(&mut self, value: &str) -> Result<(), S::Error> {
-        debug_assert!(
-            is_program_mnemonic(value),
-            "expected {} to be a valid program mnemonic",
-            value
-        );
-        self.write_bytes(value.as_bytes())
+        if is_program_mnemonic(value) {
+            self.write_bytes(value.as_bytes())
+        } else {
+            Err(EncodeError::InvalidCharacterData.into())
+        }
     }
     /// Encodes an integer value into decimal numeric program data bytes.
     ///
