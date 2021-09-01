@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use crate::{encode::Encoder, ByteSink};
+use crate::encode::{EncodeSink, Encoder};
 
 /// Trait for types that can be used as IEEE/SCPI message program data
 pub trait ProgramData {
     /// Encodes this value as bytes into the given encoder.
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error>;
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error>;
 }
 
 /// A homogeneous list of program data values
@@ -17,7 +17,7 @@ impl<'a, T> ProgramData for ProgramList<'a, T>
 where
     T: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         for data in self.0 {
             data.encode(encoder)?;
         }
@@ -26,7 +26,7 @@ where
 }
 
 impl ProgramData for () {
-    fn encode<S: ByteSink>(&self, _: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, _: &mut Encoder<S>) -> Result<(), S::Error> {
         Ok(())
     }
 }
@@ -35,7 +35,7 @@ impl<T> ProgramData for Option<T>
 where
     T: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         if let Some(data) = self {
             data.encode(encoder)
         } else {
@@ -45,123 +45,123 @@ where
 }
 
 impl ProgramData for f32 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_float(*self)
     }
 }
 
 impl ProgramData for f64 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_float(*self)
     }
 }
 
 impl ProgramData for u8 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for u16 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for u32 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for u64 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for u128 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for usize {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 
 impl ProgramData for i8 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for i16 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for i32 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for i64 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for i128 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 impl ProgramData for isize {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_numeric_integer(*self)
     }
 }
 
 impl<'a> ProgramData for &'a str {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_string(*self)
     }
 }
 
 impl ProgramData for str {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_string(self)
     }
 }
 
 impl<'a> ProgramData for &'a [u8] {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_definite_block(*self)
     }
 }
 
 impl ProgramData for [u8] {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_definite_block(self)
     }
 }
 
 impl ProgramData for bool {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         encoder.encode_boolean(*self)
     }
@@ -177,7 +177,7 @@ where
     A: ProgramData,
     B: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         self.0.encode(encoder)?;
         self.1.encode(encoder)
     }
@@ -189,7 +189,7 @@ where
     B: ProgramData,
     C: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         self.0.encode(encoder)?;
         self.1.encode(encoder)?;
         self.2.encode(encoder)
@@ -203,7 +203,7 @@ where
     C: ProgramData,
     D: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         self.0.encode(encoder)?;
         self.1.encode(encoder)?;
         self.2.encode(encoder)?;

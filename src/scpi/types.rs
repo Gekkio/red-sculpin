@@ -5,8 +5,11 @@
 use core::convert::TryFrom;
 
 use crate::{
-    decode::Decoder, encode::Encoder, program_data::ProgramData, response_data::ResponseData,
-    ByteSink, ByteSource,
+    decode::Decoder,
+    encode::{EncodeSink, Encoder},
+    program_data::ProgramData,
+    response_data::ResponseData,
+    ByteSource,
 };
 
 /// Special program data that allows the instrument to select a numeric value.
@@ -16,7 +19,7 @@ use crate::{
 pub struct DefaultValue;
 
 impl ProgramData for DefaultValue {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         // Reference: `SCPI 1999.0: 7.2.1.1 - DEFault`
         encoder.encode_characters("DEF")
@@ -33,7 +36,7 @@ pub enum Limit {
 }
 
 impl ProgramData for Limit {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         // Reference: `SCPI 1999.0: 7.2.1.2 - MINimum|MAXimum`
         encoder.encode_characters(match self {
@@ -53,7 +56,7 @@ pub enum Direction {
 }
 
 impl ProgramData for Direction {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
         // Reference: `SCPI 1999.0: 7.2.1.3 - UP|DOWN`
         encoder.encode_characters(match self {
@@ -405,7 +408,7 @@ impl<T> ProgramData for ValueOrLimit<T>
 where
     T: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         match self {
             ValueOrLimit::Value(value) => value.encode(encoder),
             ValueOrLimit::Limit(limit) => limit.encode(encoder),
@@ -440,7 +443,7 @@ impl<T> ProgramData for ValueOrDefault<T>
 where
     T: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         match self {
             ValueOrDefault::Value(value) => value.encode(encoder),
             ValueOrDefault::Default => DefaultValue.encode(encoder),
@@ -477,7 +480,7 @@ impl<T> ProgramData for ValueOrDefaultOrLimit<T>
 where
     T: ProgramData,
 {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         match self {
             ValueOrDefaultOrLimit::Value(value) => value.encode(encoder),
             ValueOrDefaultOrLimit::Default => DefaultValue.encode(encoder),
@@ -505,7 +508,7 @@ impl From<Limit> for DefaultOrLimit {
 }
 
 impl ProgramData for DefaultOrLimit {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         match self {
             DefaultOrLimit::Default => DefaultValue.encode(encoder),
             DefaultOrLimit::Limit(limit) => limit.encode(encoder),

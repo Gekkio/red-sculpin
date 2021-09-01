@@ -33,11 +33,9 @@
 
 use core::str;
 
-use encode::EncodeError;
-
 use crate::{
     decode::{DecodeError, Decoder},
-    encode::Encoder,
+    encode::{EncodeError, EncodeSink, Encoder},
 };
 pub use crate::{
     ieee::types::*,
@@ -102,12 +100,14 @@ impl ByteSink for Vec<u8> {
     }
 }
 
+impl EncodeSink for Vec<u8> {}
+
 /// Trait for types that represent IEEE/SCPI commands
 pub trait Command {
     type ProgramData: ProgramData;
     fn mnemonic(&self) -> &str;
     fn program_data(&self) -> Option<Self::ProgramData>;
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_message_unit()?;
         encoder.write_bytes(self.mnemonic().as_bytes())?;
         if let Some(program_data) = self.program_data() {
@@ -123,7 +123,7 @@ pub trait Query {
     type ResponseData: ResponseData;
     fn mnemonic(&self) -> &str;
     fn program_data(&self) -> Option<Self::ProgramData>;
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_message_unit()?;
         encoder.write_bytes(self.mnemonic().as_bytes())?;
         if let Some(program_data) = self.program_data() {

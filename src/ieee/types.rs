@@ -6,10 +6,10 @@ use bitflags::bitflags;
 
 use crate::{
     decode::{DecodeError, Decoder},
-    encode::Encoder,
+    encode::{EncodeSink, Encoder},
     program_data::ProgramData,
     response_data::ResponseData,
-    ArbitraryAscii, ByteSink, ByteSource,
+    ArbitraryAscii, ByteSource,
 };
 
 /// IEEE 488.2 Device identification response
@@ -127,7 +127,7 @@ bitflags! {
 }
 
 impl ProgramData for StandardEventStatus {
-    fn encode<S: ByteSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         self.bits().encode(encoder)
     }
 }

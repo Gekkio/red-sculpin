@@ -35,6 +35,13 @@ impl fmt::Display for EncodeError {
 
 impl Error for EncodeError {}
 
+/// A sink for encoded bytes
+pub trait EncodeSink: ByteSink {
+    fn terminate_message(&mut self) -> Result<(), Self::Error> {
+        self.write_byte(PROGRAM_MESSAGE_TERMINATOR)
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum EncodeState {
     Initial,
@@ -50,24 +57,25 @@ impl Default for EncodeState {
 }
 
 #[must_use]
-pub struct Encoder<S: ByteSink> {
+#[derive(Copy, Clone, Debug)]
+pub struct Encoder<S: EncodeSink> {
     sink: S,
     state: EncodeState,
 }
 
 /// Reference: IEEE 488.2: 7.4.1 - \<PROGRAM MESSAGE UNIT SEPARATOR\>
-const PROGRAM_MESSAGE_UNIT_SEPARATOR: u8 = b';';
+pub const PROGRAM_MESSAGE_UNIT_SEPARATOR: u8 = b';';
 
 /// Reference: IEEE 488.2: 7.4.2 - \<PROGRAM DATA SEPARATOR\>
-const PROGRAM_DATA_SEPARATOR: u8 = b',';
+pub const PROGRAM_DATA_SEPARATOR: u8 = b',';
 
 /// Reference: IEEE 488.2: 7.4.3 - \<PROGRAM HEADER SEPARATOR\>
-const PROGRAM_HEADER_SEPARATOR: u8 = b' ';
+pub const PROGRAM_HEADER_SEPARATOR: u8 = b' ';
 
 /// Reference: IEEE 488.2: 7.5 - \<PROGRAM MESSAGE TERMINATOR\>
-const PROGRAM_MESSAGE_TERMINATOR: u8 = b'\n';
+pub const PROGRAM_MESSAGE_TERMINATOR: u8 = b'\n';
 
-impl<S: ByteSink> Encoder<S> {
+impl<S: EncodeSink> Encoder<S> {
     pub fn new(sink: S) -> Encoder<S> {
         Encoder {
             sink,
@@ -112,7 +120,7 @@ impl<S: ByteSink> Encoder<S> {
     pub fn end_message(&mut self) -> Result<(), S::Error> {
         self.state = match self.state {
             EncodeState::Header | EncodeState::Data => {
-                self.sink.write_byte(PROGRAM_MESSAGE_TERMINATOR)?;
+                self.sink.terminate_message()?;
                 EncodeState::End
             }
             EncodeState::End => EncodeState::End,
