@@ -29,11 +29,11 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
       - name: Run checks
-        run: cargo check
+        run: cargo check --all
       - name: Check formatting
-        run: cargo fmt -- --check
+        run: cargo fmt --all -- --check
       - name: Run clippy
-        run: cargo clippy
+        run: cargo clippy --all
 
   compile_and_test:
     name: Compile and run tests
@@ -60,6 +60,6 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
       - name: Compile
-        run: cargo test --no-run --locked
+        run: cargo test --all --no-run
       - name: Test
-        run: cargo test
+        run: cargo test --all
