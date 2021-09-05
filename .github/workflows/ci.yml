@@ -9,6 +9,9 @@ on:
     branches:
     - main
 
+env:
+  CARGO_INCREMENTAL: 0
+
 jobs:
   check:
     name: Run checks
@@ -23,32 +26,17 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      - name: Run cargo check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
-      - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - name: Run checks
+        run: cargo check
+      - name: Check formatting
+        run: cargo fmt -- --check
+      - name: Run clippy
+        run: cargo clippy
 
-  test:
-    name: Run tests
+  compile_and_test:
+    name: Compile and run tests
     needs: [check]
     runs-on: ${{ matrix.os }}
     strategy:
@@ -69,17 +57,9 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - name: Compile
+        run: cargo test --no-run --locked
+      - name: Test
+        run: cargo test
