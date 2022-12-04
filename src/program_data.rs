@@ -135,7 +135,7 @@ impl ProgramData for isize {
 impl<'a> ProgramData for &'a str {
     fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encoder.encode_string(*self)
+        encoder.encode_string(self)
     }
 }
 
@@ -149,7 +149,7 @@ impl ProgramData for str {
 impl<'a> ProgramData for &'a [u8] {
     fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
         encoder.begin_program_data()?;
-        encoder.encode_definite_block(*self)
+        encoder.encode_definite_block(self)
     }
 }
 
