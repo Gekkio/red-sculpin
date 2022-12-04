@@ -520,3 +520,43 @@ pub fn decode_boolean<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<bool, S
         _ => Err(DecodeError::Parse.into()),
     }
 }
+
+#[cfg(test)]
+mod boolean_decoding {
+    use super::{decode_boolean, Decoder};
+    use crate::{decode::DecodeError, Error};
+
+    #[test]
+    fn zero_is_false() {
+        match decode(b"0\n") {
+            Ok(false) => (),
+            other => panic!("Unexpected result: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn one_is_true() {
+        match decode(b"1\n") {
+            Ok(true) => (),
+            other => panic!("Unexpected result: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn textual_forms_are_not_valid() {
+        match decode(b"false\n") {
+            Err(Error::Decode(DecodeError::Parse)) => (),
+            other => panic!("Unexpected result: {:?}", other),
+        }
+        match decode(b"true\n") {
+            Err(Error::Decode(DecodeError::Parse)) => (),
+            other => panic!("Unexpected result: {:?}", other),
+        }
+    }
+
+    fn decode(bytes: &'static [u8]) -> Result<bool, Error> {
+        let mut decoder = Decoder::new(bytes);
+        decoder.begin_response_data()?;
+        decode_boolean(&mut decoder)
+    }
+}
