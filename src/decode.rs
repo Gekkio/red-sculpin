@@ -14,6 +14,7 @@ use crate::{
 pub enum DecodeError {
     Parse,
     UnexpectedEnd,
+    BufferOverflow,
     InvalidDecodeState(DecodeState),
 }
 
@@ -22,6 +23,7 @@ impl fmt::Display for DecodeError {
         match self {
             DecodeError::Parse => write!(f, "parse error"),
             DecodeError::UnexpectedEnd => write!(f, "unexpected end"),
+            DecodeError::BufferOverflow => write!(f, "buffer overflow"),
             DecodeError::InvalidDecodeState(state) => {
                 write!(f, "invalid decode state ({:?})", state)
             }
@@ -190,12 +192,12 @@ pub fn decode_characters<S: ByteSource, T: fmt::Write>(
 ) -> Result<(), S::Error> {
     target
         .write_char(upper(decoder)? as char)
-        .map_err(|_| DecodeError::Parse)?;
+        .map_err(|_| DecodeError::BufferOverflow)?;
     loop {
         match decoder.read_byte()? {
             byte @ b'A'..=b'Z' | byte @ b'0'..=b'9' | byte @ b'_' => target
                 .write_char(byte as char)
-                .map_err(|_| DecodeError::Parse)?,
+                .map_err(|_| DecodeError::BufferOverflow)?,
             byte => break decoder.end_with(byte),
         }
     }
@@ -394,12 +396,14 @@ pub fn decode_string<S: ByteSource, T: fmt::Write>(
     loop {
         match decoder.read_byte()? {
             b'"' => match decoder.read_byte()? {
-                b'"' => target.write_char('"').map_err(|_| DecodeError::Parse)?,
+                b'"' => target
+                    .write_char('"')
+                    .map_err(|_| DecodeError::BufferOverflow)?,
                 byte => break decoder.end_with(byte),
             },
             byte if byte.is_ascii() => target
                 .write_char(byte as char)
-                .map_err(|_| DecodeError::Parse)?,
+                .map_err(|_| DecodeError::BufferOverflow)?,
             _ => break Err(DecodeError::Parse.into()),
         }
     }
@@ -440,7 +444,8 @@ pub fn decode_arbitrary_block<S: ByteSource, T: ByteSink>(
             let digits = (byte - b'0') as usize;
             let mut buf = ArrayBuffer::<9>::new();
             for _ in 0..digits {
-                buf.push(digit(decoder)?).map_err(|_| DecodeError::Parse)?;
+                buf.push(digit(decoder)?)
+                    .map_err(|_| DecodeError::BufferOverflow)?;
             }
             let block_size = str::from_utf8(buf.finish())
                 .ok()
@@ -449,7 +454,7 @@ pub fn decode_arbitrary_block<S: ByteSource, T: ByteSink>(
             for _ in 0..block_size {
                 target
                     .write_byte(decoder.read_byte()?)
-                    .map_err(|_| DecodeError::Parse)?;
+                    .map_err(|_| DecodeError::BufferOverflow)?;
             }
             let byte = decoder.read_byte()?;
             decoder.end_with(byte)
@@ -458,7 +463,9 @@ pub fn decode_arbitrary_block<S: ByteSource, T: ByteSink>(
             // indefinite length format
             match decoder.read_byte()? {
                 byte @ b'\n' => break decoder.end_with(byte),
-                byte => target.write_byte(byte).map_err(|_| DecodeError::Parse)?,
+                byte => target
+                    .write_byte(byte)
+                    .map_err(|_| DecodeError::BufferOverflow)?,
             }
         },
         _ => Err(DecodeError::Parse.into()),
@@ -493,7 +500,7 @@ pub fn decode_arbitrary_ascii<S: ByteSource, T: fmt::Write>(
             byte @ b'\n' => break decoder.end_with(byte),
             byte if byte.is_ascii() => target
                 .write_char(byte as char)
-                .map_err(|_| DecodeError::Parse)?,
+                .map_err(|_| DecodeError::BufferOverflow)?,
             _ => break Err(DecodeError::Parse.into()),
         }
     }
