@@ -18,16 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+        uses: Swatinem/rust-cache@359a70e43a0bb8a13953b04a90f76428b4959bb6
       - name: Run checks
         run: cargo check --all
       - name: Check formatting
@@ -51,15 +48,13 @@ jobs:
           - windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
+        uses: actions/checkout@v3
+      - name: Install toolchain
+        run: |
+          rustup toolchain install ${{ matrix.rust }} --profile minimal
+          rustup default ${{ matrix.rust }}
       - name: Cache dependencies
-        uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+        uses: Swatinem/rust-cache@359a70e43a0bb8a13953b04a90f76428b4959bb6
       - name: Compile
         run: cargo test --all --no-run
       - name: Test
