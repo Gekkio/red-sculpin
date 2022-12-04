@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use alloc::string::String;
+
 use super::Decoder;
 use crate::{decode::DecodeError, internal::Float, ByteSource};
 
@@ -59,11 +61,13 @@ impl<S: ByteSource> Decoder<S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{decode::Decoder, internal::Float, Error};
+    use crate::{
+        decode::{DecodeError, Decoder},
+        internal::Float,
+    };
 
     mod plain_format {
         use super::decode;
-        use crate::Error;
 
         #[test]
         fn positive_value() {
@@ -95,7 +99,7 @@ mod tests {
         fn integer_part_is_mandatory() {
             let data = b".42\n";
             match decode::<f32>(data) {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
@@ -104,7 +108,7 @@ mod tests {
         fn decimal_separator_is_mandatory() {
             let data = b"42\n";
             match decode::<f32>(data) {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
@@ -113,7 +117,7 @@ mod tests {
         fn fractional_part_is_mandatory() {
             let data = b"42.\n";
             match decode::<f32>(data) {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
@@ -121,7 +125,6 @@ mod tests {
 
     mod exponential_format {
         use super::decode;
-        use crate::Error;
 
         #[test]
         fn positive_exponent() {
@@ -153,13 +156,13 @@ mod tests {
         fn exponent_sign_is_mandatory() {
             let data = b"1.0E3\n";
             match decode::<f32>(data) {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
     }
 
-    fn decode<T: Float>(bytes: &'static [u8]) -> Result<T, Error> {
+    fn decode<T: Float>(bytes: &'static [u8]) -> Result<T, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         decoder.decode_numeric_float()

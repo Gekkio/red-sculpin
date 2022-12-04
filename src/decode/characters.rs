@@ -28,7 +28,9 @@ impl<S: ByteSource> Decoder<S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{decode::Decoder, Error};
+    use alloc::string::String;
+
+    use crate::decode::{DecodeError, Decoder};
 
     #[test]
     fn uppercase_and_underscores_are_valid() {
@@ -41,7 +43,7 @@ mod tests {
     #[test]
     fn lowercase_is_invalid() {
         match decode(b"nope\n") {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
@@ -49,11 +51,11 @@ mod tests {
     #[test]
     fn other_characters_are_invalid() {
         match decode(b"FAIL!") {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
         match decode("FAIL€€".as_bytes()) {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
@@ -61,12 +63,12 @@ mod tests {
     #[test]
     fn data_cant_be_empty() {
         match decode(b"\n") {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
 
-    fn decode(bytes: &'static [u8]) -> Result<String, Error> {
+    fn decode(bytes: &'static [u8]) -> Result<String, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut buffer = String::new();

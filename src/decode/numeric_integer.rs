@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use alloc::string::String;
+
 use super::Decoder;
 use crate::{decode::DecodeError, internal::Integer, ByteSource};
 
@@ -81,11 +83,13 @@ impl<S: ByteSource> Decoder<S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{decode::Decoder, internal::Integer, Error};
+    use crate::{
+        decode::{DecodeError, Decoder},
+        internal::Integer,
+    };
 
     mod plain_format {
         use super::decode;
-        use crate::Error;
 
         #[test]
         fn positive_value() {
@@ -136,7 +140,7 @@ mod tests {
         #[test]
         fn unsigned_types_cant_be_negative() {
             match decode::<u8>(b"-42\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
@@ -144,15 +148,15 @@ mod tests {
         #[test]
         fn overflow_leads_to_an_error() {
             match decode::<u8>(b"256\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
             match decode::<i8>(b"128\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
             match decode::<i8>(b"-129\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
@@ -160,7 +164,6 @@ mod tests {
 
     mod hexadecimal_format {
         use super::decode;
-        use crate::Error;
 
         #[test]
         fn positive_value() {
@@ -194,11 +197,11 @@ mod tests {
         #[test]
         fn negative_values_are_not_supported() {
             match decode::<i8>(b"-#H2A\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
             match decode::<i8>(b"#H-2A\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
@@ -206,7 +209,6 @@ mod tests {
 
     mod octal_format {
         use super::decode;
-        use crate::Error;
 
         #[test]
         fn positive_value() {
@@ -240,11 +242,11 @@ mod tests {
         #[test]
         fn negative_values_are_not_supported() {
             match decode::<i8>(b"-#Q52\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
             match decode::<i8>(b"#Q-52\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
@@ -252,7 +254,6 @@ mod tests {
 
     mod binary_format {
         use super::decode;
-        use crate::Error;
 
         #[test]
         fn positive_value() {
@@ -286,11 +287,11 @@ mod tests {
         #[test]
         fn negative_values_are_not_supported() {
             match decode::<i8>(b"-#B101010\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
             match decode::<i8>(b"#B-101010\n") {
-                Err(Error::Decode(_)) => (),
+                Err(_) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
@@ -299,12 +300,12 @@ mod tests {
     #[test]
     fn format_switch_in_middle_is_invalid() {
         match decode::<u8>(b"12#H2A\n") {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
 
-    fn decode<T: Integer>(bytes: &'static [u8]) -> Result<T, Error> {
+    fn decode<T: Integer>(bytes: &'static [u8]) -> Result<T, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         decoder.decode_numeric_integer()

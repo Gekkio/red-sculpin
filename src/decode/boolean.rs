@@ -31,7 +31,7 @@ impl<S: ByteSource> Decoder<S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{decode::Decoder, Error};
+    use crate::decode::{DecodeError, Decoder};
 
     #[test]
     fn zero_is_false() {
@@ -52,7 +52,7 @@ mod tests {
     #[test]
     fn extra_chars_are_not_allowed() {
         match decode(b"10\n") {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
@@ -60,16 +60,16 @@ mod tests {
     #[test]
     fn textual_forms_are_not_valid() {
         match decode(b"false\n") {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
         match decode(b"true\n") {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
 
-    fn decode(bytes: &'static [u8]) -> Result<bool, Error> {
+    fn decode(bytes: &'static [u8]) -> Result<bool, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         decoder.decode_boolean()

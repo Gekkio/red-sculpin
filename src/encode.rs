@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use core::fmt::{self, Write};
-use std::error::Error;
 
 use crate::{
     internal::{ArrayBuffer, Float, Integer},
@@ -33,7 +32,8 @@ impl fmt::Display for EncodeError {
     }
 }
 
-impl Error for EncodeError {}
+#[cfg(feature = "std")]
+impl std::error::Error for EncodeError {}
 
 /// A sink for encoded bytes
 pub trait EncodeSink: ByteSink {

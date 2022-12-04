@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use core::fmt;
-use std::error::Error;
 
 pub use self::arbitrary_ascii::*;
 pub use self::arbitrary_block::*;
@@ -43,7 +42,8 @@ impl fmt::Display for DecodeError {
     }
 }
 
-impl Error for DecodeError {}
+#[cfg(feature = "std")]
+impl std::error::Error for DecodeError {}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum DecodeState {

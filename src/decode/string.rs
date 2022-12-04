@@ -34,7 +34,8 @@ impl<S: ByteSource> Decoder<S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{decode::Decoder, Error};
+    use crate::decode::{DecodeError, Decoder};
+    use alloc::string::String;
 
     #[test]
     fn data_must_be_quoted() {
@@ -43,7 +44,7 @@ mod tests {
             other => panic!("Unexpected result: {:?}", other),
         }
         match decode(b"notquoted\n").as_deref() {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
@@ -51,7 +52,7 @@ mod tests {
     #[test]
     fn opening_quote_is_mandatory() {
         match decode(b"Invalid\"\n").as_deref() {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
@@ -59,7 +60,7 @@ mod tests {
     #[test]
     fn closing_quote_is_mandatory() {
         match decode(b"\"Invalid\n").as_deref() {
-            Err(Error::Io(_)) => (),
+            Err(DecodeError::UnexpectedEnd) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
@@ -72,7 +73,7 @@ mod tests {
         }
     }
 
-    fn decode(bytes: &'static [u8]) -> Result<String, Error> {
+    fn decode(bytes: &'static [u8]) -> Result<String, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut buffer = String::new();

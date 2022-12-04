@@ -56,19 +56,21 @@ impl<S: ByteSource> Decoder<S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{decode::Decoder, Error};
+    use alloc::vec::Vec;
+
+    use crate::decode::{DecodeError, Decoder};
 
     #[test]
     fn header_must_exist() {
         match decode(b"\n") {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
 
     mod definite_format {
         use super::decode;
-        use crate::Error;
+        use crate::decode::DecodeError;
 
         #[test]
         fn data_can_be_empty() {
@@ -97,7 +99,7 @@ mod tests {
         #[test]
         fn having_too_few_bytes_leads_to_error() {
             match decode(b"#210truncated\n") {
-                Err(Error::Io(_)) => (),
+                Err(DecodeError::UnexpectedEnd) => (),
                 other => panic!("Unexpected result: {:?}", other),
             }
         }
@@ -131,7 +133,7 @@ mod tests {
         }
     }
 
-    fn decode(bytes: &'static [u8]) -> Result<Vec<u8>, Error> {
+    fn decode(bytes: &'static [u8]) -> Result<Vec<u8>, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut result = Vec::new();

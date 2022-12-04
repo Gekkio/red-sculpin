@@ -29,7 +29,9 @@ impl<S: ByteSource> Decoder<S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{decode::Decoder, Error};
+    use alloc::string::String;
+
+    use crate::decode::{DecodeError, Decoder};
 
     #[test]
     fn data_with_only_terminator_is_an_empty_string() {
@@ -50,7 +52,7 @@ mod tests {
     #[test]
     fn non_ascii_is_not_valid() {
         match decode("This is *not* ASCII: €€!\n".as_bytes()) {
-            Err(Error::Decode(_)) => (),
+            Err(_) => (),
             other => panic!("Unexpected result: {:?}", other),
         }
     }
@@ -63,7 +65,7 @@ mod tests {
         }
     }
 
-    fn decode(bytes: &'static [u8]) -> Result<String, Error> {
+    fn decode(bytes: &'static [u8]) -> Result<String, DecodeError> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut buffer = String::new();

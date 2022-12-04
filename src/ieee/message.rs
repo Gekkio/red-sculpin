@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+use alloc::vec::Vec;
+
 use crate::{
     ieee::types::{DeviceIdentification, MacroList, StandardEventStatus, StatusByte},
     internal::{declare_tuple_command, declare_tuple_query},
