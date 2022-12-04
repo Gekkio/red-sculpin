@@ -21,12 +21,13 @@ mod numeric_float;
 mod numeric_integer;
 mod string;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum DecodeError {
     Parse,
     UnexpectedEnd,
     BufferOverflow,
     InvalidDecodeState(DecodeState),
+    InvalidDataTerminator { byte: u8 },
 }
 
 impl fmt::Display for DecodeError {
@@ -37,6 +38,9 @@ impl fmt::Display for DecodeError {
             DecodeError::BufferOverflow => write!(f, "buffer overflow"),
             DecodeError::InvalidDecodeState(state) => {
                 write!(f, "invalid decode state ({:?})", state)
+            }
+            DecodeError::InvalidDataTerminator { byte } => {
+                write!(f, "invalid data terminator byte (0x{byte:02x})",)
             }
         }
     }
@@ -121,7 +125,7 @@ impl<S: ByteSource> Decoder<S> {
                 b';' => DecodeState::MessageUnitExpected,
                 // Reference: IEEE 488.2: 8.4.2 - \<RESPONSE DATA SEPARATOR\>
                 b',' => DecodeState::DataExpected,
-                _ => return Err(DecodeError::InvalidDecodeState(self.state))?,
+                _ => return Err(DecodeError::InvalidDataTerminator { byte })?,
             },
             _ => return Err(DecodeError::InvalidDecodeState(self.state))?,
         };

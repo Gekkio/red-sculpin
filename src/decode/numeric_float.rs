@@ -67,98 +67,68 @@ mod tests {
     };
 
     mod plain_format {
+        use matches::assert_matches;
+
         use super::decode;
+        use crate::decode::DecodeError;
 
         #[test]
         fn positive_value() {
             let data = b"42.69\n";
-            match decode::<f32>(data) {
-                Ok(value) if value == 42.69 => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<f64>(data) {
-                Ok(value) if value == 42.69 => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<f32>(data), Ok(value) if value == 42.69);
+            assert_matches!(decode::<f64>(data), Ok(value) if value == 42.69);
         }
 
         #[test]
         fn negative_value() {
             let data = b"-5.123456789\n";
-            match decode::<f32>(data) {
-                Ok(value) if value == -5.123456789 => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<f64>(data) {
-                Ok(value) if value == -5.123456789 => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<f32>(data), Ok(value) if value == -5.123456789);
+            assert_matches!(decode::<f64>(data), Ok(value) if value == -5.123456789);
         }
 
         #[test]
         fn integer_part_is_mandatory() {
             let data = b".42\n";
-            match decode::<f32>(data) {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<f32>(data), Err(DecodeError::Parse));
         }
 
         #[test]
         fn decimal_separator_is_mandatory() {
             let data = b"42\n";
-            match decode::<f32>(data) {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<f32>(data), Err(DecodeError::Parse));
         }
 
         #[test]
         fn fractional_part_is_mandatory() {
             let data = b"42.\n";
-            match decode::<f32>(data) {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<f32>(data), Err(DecodeError::Parse));
         }
     }
 
     mod exponential_format {
+        use matches::assert_matches;
+
         use super::decode;
+        use crate::decode::DecodeError;
 
         #[test]
         fn positive_exponent() {
             let data = b"1.0005E+3\n";
-            match decode::<f32>(data) {
-                Ok(value) if value == 1.0005E3 => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<f64>(data) {
-                Ok(value) if value == 1.0005E3 => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<f32>(data), Ok(value) if value == 1.0005E3);
+            assert_matches!(decode::<f64>(data), Ok(value) if value == 1.0005E3);
         }
 
         #[test]
         fn negative_exponent() {
             let data = b"-99.123E-1\n";
-            match decode::<f32>(data) {
-                Ok(value) if value == -99.123E-1 => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<f64>(data) {
-                Ok(value) if value == -99.123E-1 => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<f32>(data), Ok(value) if value == -99.123E-1);
+            assert_matches!(decode::<f64>(data), Ok(value) if value == -99.123E-1);
         }
 
         #[test]
         fn exponent_sign_is_mandatory() {
             let data = b"1.0E3\n";
-            match decode::<f32>(data) {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<f32>(data), Err(DecodeError::Parse));
         }
     }
 

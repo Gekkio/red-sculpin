@@ -30,39 +30,37 @@ impl<S: ByteSource> Decoder<S> {
 #[cfg(test)]
 mod tests {
     use alloc::string::String;
+    use matches::assert_matches;
 
     use crate::decode::{DecodeError, Decoder};
 
     #[test]
     fn data_with_only_terminator_is_an_empty_string() {
-        match decode(b"\n").as_deref() {
-            Ok("") => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(decode(b"\n").as_deref(), Ok(""));
     }
 
     #[test]
     fn ascii_string_is_valid() {
-        match decode(b"This is ASCII! 123\0\r@# \t \n").as_deref() {
-            Ok("This is ASCII! 123\0\r@# \t ") => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(
+            decode(b"This is ASCII! 123\0\r@# \t \n").as_deref(),
+            Ok("This is ASCII! 123\0\r@# \t ")
+        );
     }
 
     #[test]
     fn non_ascii_is_not_valid() {
-        match decode("This is *not* ASCII: €€!\n".as_bytes()) {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(
+            decode("This is *not* ASCII: €€!\n".as_bytes()),
+            Err(DecodeError::Parse)
+        );
     }
 
     #[test]
     fn first_newline_terminates_the_string() {
-        match decode("Parsed\nNot parsed".as_bytes()).as_deref() {
-            Ok("Parsed") => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(
+            decode("Parsed\nNot parsed".as_bytes()).as_deref(),
+            Ok("Parsed")
+        );
     }
 
     fn decode(bytes: &'static [u8]) -> Result<String, DecodeError> {

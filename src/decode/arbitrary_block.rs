@@ -57,79 +57,66 @@ impl<S: ByteSource> Decoder<S> {
 #[cfg(test)]
 mod tests {
     use alloc::vec::Vec;
+    use matches::assert_matches;
 
     use crate::decode::{DecodeError, Decoder};
 
     #[test]
     fn header_must_exist() {
-        match decode(b"\n") {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(decode(b"\n"), Err(DecodeError::Parse));
     }
 
     mod definite_format {
+        use matches::assert_matches;
+
         use super::decode;
         use crate::decode::DecodeError;
 
         #[test]
         fn data_can_be_empty() {
-            match decode(b"#10\n").as_deref() {
-                Ok(b"") => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode(b"#10\n").as_deref(), Ok(b""));
         }
 
         #[test]
         fn header_length_can_be_1() {
-            match decode(b"#15short\n").as_deref() {
-                Ok(b"short") => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode(b"#15short\n").as_deref(), Ok(b"short"));
         }
 
         #[test]
         fn header_length_can_be_2() {
-            match decode(b"#215verylongmessage\n").as_deref() {
-                Ok(b"verylongmessage") => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(
+                decode(b"#215verylongmessage\n").as_deref(),
+                Ok(b"verylongmessage")
+            );
         }
 
         #[test]
         fn having_too_few_bytes_leads_to_error() {
-            match decode(b"#210truncated\n") {
-                Err(DecodeError::UnexpectedEnd) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode(b"#210truncated\n"), Err(DecodeError::UnexpectedEnd));
         }
     }
 
     mod indefinite_format {
+        use matches::assert_matches;
+
         use super::decode;
 
         #[test]
         fn format_uses_terminator_instead_of_length() {
-            match decode(b"#0justsomedata\n").as_deref() {
-                Ok(b"justsomedata") => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode(b"#0justsomedata\n").as_deref(), Ok(b"justsomedata"));
         }
 
         #[test]
         fn data_can_be_empty() {
-            match decode(b"#0\n").as_deref() {
-                Ok(b"") => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode(b"#0\n").as_deref(), Ok(b""));
         }
 
         #[test]
         fn first_newline_terminates_the_block() {
-            match decode("#0Parsed\nNot parsed".as_bytes()).as_deref() {
-                Ok(b"Parsed") => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(
+                decode("#0Parsed\nNot parsed".as_bytes()).as_deref(),
+                Ok(b"Parsed")
+            );
         }
     }
 

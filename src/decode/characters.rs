@@ -29,43 +29,35 @@ impl<S: ByteSource> Decoder<S> {
 #[cfg(test)]
 mod tests {
     use alloc::string::String;
+    use matches::assert_matches;
 
     use crate::decode::{DecodeError, Decoder};
 
     #[test]
     fn uppercase_and_underscores_are_valid() {
-        match decode(b"AS_DF123\n").as_deref() {
-            Ok("AS_DF123") => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(decode(b"AS_DF123\n").as_deref(), Ok("AS_DF123"));
     }
 
     #[test]
     fn lowercase_is_invalid() {
-        match decode(b"nope\n") {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(decode(b"nope\n"), Err(DecodeError::Parse));
     }
 
     #[test]
     fn other_characters_are_invalid() {
-        match decode(b"FAIL!") {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
-        match decode("FAIL€€".as_bytes()) {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(
+            decode(b"FAIL!"),
+            Err(DecodeError::InvalidDataTerminator { byte: b'!' })
+        );
+        assert_matches!(
+            decode("FAIL€€".as_bytes()),
+            Err(DecodeError::InvalidDataTerminator { byte: 0xe2 })
+        );
     }
 
     #[test]
     fn data_cant_be_empty() {
-        match decode(b"\n") {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(decode(b"\n"), Err(DecodeError::Parse));
     }
 
     fn decode(bytes: &'static [u8]) -> Result<String, DecodeError> {

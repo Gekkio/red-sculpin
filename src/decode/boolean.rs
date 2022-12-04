@@ -31,42 +31,32 @@ impl<S: ByteSource> Decoder<S> {
 
 #[cfg(test)]
 mod tests {
+    use matches::assert_matches;
+
     use crate::decode::{DecodeError, Decoder};
 
     #[test]
     fn zero_is_false() {
-        match decode(b"0\n") {
-            Ok(false) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(decode(b"0\n"), Ok(false));
     }
 
     #[test]
     fn one_is_true() {
-        match decode(b"1\n") {
-            Ok(true) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(decode(b"1\n"), Ok(true));
     }
 
     #[test]
     fn extra_chars_are_not_allowed() {
-        match decode(b"10\n") {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(
+            decode(b"10\n"),
+            Err(DecodeError::InvalidDataTerminator { byte: b'0' })
+        );
     }
 
     #[test]
     fn textual_forms_are_not_valid() {
-        match decode(b"false\n") {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
-        match decode(b"true\n") {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(decode(b"false\n"), Err(DecodeError::Parse));
+        assert_matches!(decode(b"true\n"), Err(DecodeError::Parse));
     }
 
     fn decode(bytes: &'static [u8]) -> Result<bool, DecodeError> {

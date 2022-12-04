@@ -83,226 +83,135 @@ impl<S: ByteSource> Decoder<S> {
 
 #[cfg(test)]
 mod tests {
+    use matches::assert_matches;
+
     use crate::{
         decode::{DecodeError, Decoder},
         internal::Integer,
     };
 
     mod plain_format {
+        use matches::assert_matches;
+
         use super::decode;
+        use crate::decode::DecodeError;
 
         #[test]
         fn positive_value() {
             let data = b"42\n";
-            match decode::<u8>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<u32>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<usize>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i8>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i32>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<isize>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<u8>(data), Ok(42));
+            assert_matches!(decode::<u16>(data), Ok(42));
+            assert_matches!(decode::<u32>(data), Ok(42));
+            assert_matches!(decode::<u64>(data), Ok(42));
+            assert_matches!(decode::<usize>(data), Ok(42));
+            assert_matches!(decode::<i8>(data), Ok(42));
+            assert_matches!(decode::<i16>(data), Ok(42));
+            assert_matches!(decode::<i32>(data), Ok(42));
+            assert_matches!(decode::<i64>(data), Ok(42));
+            assert_matches!(decode::<isize>(data), Ok(42));
         }
 
         #[test]
         fn negative_value() {
             let data = b"-42\n";
-            match decode::<i8>(data) {
-                Ok(-42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i32>(data) {
-                Ok(-42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<isize>(data) {
-                Ok(-42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<i8>(data), Ok(-42));
+            assert_matches!(decode::<i16>(data), Ok(-42));
+            assert_matches!(decode::<i32>(data), Ok(-42));
+            assert_matches!(decode::<i64>(data), Ok(-42));
+            assert_matches!(decode::<isize>(data), Ok(-42));
         }
 
         #[test]
         fn unsigned_types_cant_be_negative() {
-            match decode::<u8>(b"-42\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<u8>(b"-42\n"), Err(DecodeError::Parse));
         }
 
         #[test]
         fn overflow_leads_to_an_error() {
-            match decode::<u8>(b"256\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i8>(b"128\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i8>(b"-129\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<u8>(b"256\n"), Err(DecodeError::Parse));
+            assert_matches!(decode::<i8>(b"128\n"), Err(DecodeError::Parse));
+            assert_matches!(decode::<i8>(b"-129\n"), Err(DecodeError::Parse));
         }
     }
 
     mod hexadecimal_format {
+        use matches::assert_matches;
+
         use super::decode;
+        use crate::decode::DecodeError;
 
         #[test]
         fn positive_value() {
             let data = b"#H2A\n";
-            match decode::<u8>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<u32>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<usize>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i8>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i32>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<isize>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<u8>(data), Ok(42));
+            assert_matches!(decode::<u32>(data), Ok(42));
+            assert_matches!(decode::<usize>(data), Ok(42));
+            assert_matches!(decode::<i8>(data), Ok(42));
+            assert_matches!(decode::<i32>(data), Ok(42));
+            assert_matches!(decode::<isize>(data), Ok(42));
         }
 
         #[test]
         fn negative_values_are_not_supported() {
-            match decode::<i8>(b"-#H2A\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i8>(b"#H-2A\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<i8>(b"-#H2A\n"), Err(DecodeError::Parse));
+            assert_matches!(decode::<i8>(b"#H-2A\n"), Err(DecodeError::Parse));
         }
     }
 
     mod octal_format {
+        use matches::assert_matches;
+
         use super::decode;
+        use crate::decode::DecodeError;
 
         #[test]
         fn positive_value() {
             let data = b"#Q52\n";
-            match decode::<u8>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<u32>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<usize>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i8>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i32>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<isize>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<u8>(data), Ok(42));
+            assert_matches!(decode::<u32>(data), Ok(42));
+            assert_matches!(decode::<usize>(data), Ok(42));
+            assert_matches!(decode::<i8>(data), Ok(42));
+            assert_matches!(decode::<i32>(data), Ok(42));
+            assert_matches!(decode::<isize>(data), Ok(42));
         }
 
         #[test]
         fn negative_values_are_not_supported() {
-            match decode::<i8>(b"-#Q52\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i8>(b"#Q-52\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<i8>(b"-#Q52\n"), Err(DecodeError::Parse));
+            assert_matches!(decode::<i8>(b"#Q-52\n"), Err(DecodeError::Parse));
         }
     }
 
     mod binary_format {
+        use matches::assert_matches;
+
         use super::decode;
+        use crate::decode::DecodeError;
 
         #[test]
         fn positive_value() {
             let data = b"#B101010\n";
-            match decode::<u8>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<u32>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<usize>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i8>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i32>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<isize>(data) {
-                Ok(42) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<u8>(data), Ok(42));
+            assert_matches!(decode::<u32>(data), Ok(42));
+            assert_matches!(decode::<usize>(data), Ok(42));
+            assert_matches!(decode::<i8>(data), Ok(42));
+            assert_matches!(decode::<i32>(data), Ok(42));
+            assert_matches!(decode::<isize>(data), Ok(42));
         }
 
         #[test]
         fn negative_values_are_not_supported() {
-            match decode::<i8>(b"-#B101010\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
-            match decode::<i8>(b"#B-101010\n") {
-                Err(_) => (),
-                other => panic!("Unexpected result: {:?}", other),
-            }
+            assert_matches!(decode::<i8>(b"-#B101010\n"), Err(DecodeError::Parse));
+            assert_matches!(decode::<i8>(b"#B-101010\n"), Err(DecodeError::Parse));
         }
     }
 
     #[test]
     fn format_switch_in_middle_is_invalid() {
-        match decode::<u8>(b"12#H2A\n") {
-            Err(_) => (),
-            other => panic!("Unexpected result: {:?}", other),
-        }
+        assert_matches!(
+            decode::<u8>(b"12#H2A\n"),
+            Err(DecodeError::InvalidDataTerminator { byte: b'#' })
+        );
     }
 
     fn decode<T: Integer>(bytes: &'static [u8]) -> Result<T, DecodeError> {
