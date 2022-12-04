@@ -18,7 +18,7 @@ mod macros {
             impl<$l> $crate::Command for $name<$l> {
                 type ProgramData = ();
                 fn mnemonic(&self) -> &str { $mne }
-                fn program_data(&self) -> Self::ProgramData { () }
+                fn program_data(&self) -> Self::ProgramData { }
             }
         };
         ($(#[$attr:meta])* pub struct $name:ident<$mne:literal>;) => {
@@ -28,7 +28,7 @@ mod macros {
             impl $crate::Command for $name {
                 type ProgramData = ();
                 fn mnemonic(&self) -> &str { $mne }
-                fn program_data(&self) -> Self::ProgramData { () }
+                fn program_data(&self) -> Self::ProgramData { }
             }
         };
         ($(#[$attr:meta])* pub struct $name:ident<$l:lifetime, $mne:literal>(pub $prog:ty);) => {
@@ -62,7 +62,7 @@ mod macros {
                 type ProgramData = ();
                 type ResponseData = $res;
                 fn mnemonic(&self) -> &str { $mne }
-                fn program_data(&self) -> Self::ProgramData { () }
+                fn program_data(&self) -> Self::ProgramData { }
             }
         };
         ($(#[$attr:meta])* pub struct $name:ident<$mne:literal, $res:ty>;) => {
@@ -73,7 +73,7 @@ mod macros {
                 type ProgramData = ();
                 type ResponseData = $res;
                 fn mnemonic(&self) -> &str { $mne }
-                fn program_data(&self) -> Self::ProgramData { () }
+                fn program_data(&self) -> Self::ProgramData { }
             }
         };
         ($(#[$attr:meta])* pub struct $name:ident<$l:lifetime, $mne:literal, $res:ty>(pub $prog:ty);) => {
