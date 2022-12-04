@@ -145,7 +145,7 @@ impl<S: EncodeSink> Encoder<S> {
     ///
     /// Reference: IEEE 488.2: 7.7.1 - \<CHARACTER PROGRAM DATA\>
     pub fn encode_characters(&mut self, value: &str) -> Result<(), S::Error> {
-        if is_program_mnemonic(value) {
+        if is_program_mnemonic(value.as_bytes()) {
             self.write_bytes(value.as_bytes())
         } else {
             Err(EncodeError::InvalidCharacterData.into())
