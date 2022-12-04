@@ -60,10 +60,7 @@ mod tests {
 
     #[test]
     fn quotes_are_escaped_by_doubling() {
-        assert_matches!(
-            decode(b"\"quote:\"\"\"\n").as_deref(),
-            Ok("quote:\"")
-        );
+        assert_matches!(decode(b"\"quote:\"\"\"\n").as_deref(), Ok("quote:\""));
     }
 
     fn decode(bytes: &'static [u8]) -> Result<String, DecodeError> {
