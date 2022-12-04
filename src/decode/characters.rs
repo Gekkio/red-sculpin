@@ -4,25 +4,24 @@
 
 use core::fmt;
 
-use super::{upper, Decoder};
+use super::Decoder;
 use crate::{decode::DecodeError, ByteSource};
 
 /// Decodes character response data
 ///
 /// Reference: IEEE 488.2: 8.7.1 - \<CHARACTER RESPONSE DATA\>
-pub fn decode_characters<S: ByteSource, T: fmt::Write>(
-    decoder: &mut Decoder<S>,
-    target: &mut T,
-) -> Result<(), S::Error> {
-    target
-        .write_char(upper(decoder)? as char)
-        .map_err(|_| DecodeError::BufferOverflow)?;
-    loop {
-        match decoder.read_byte()? {
-            byte @ b'A'..=b'Z' | byte @ b'0'..=b'9' | byte @ b'_' => target
-                .write_char(byte as char)
-                .map_err(|_| DecodeError::BufferOverflow)?,
-            byte => break decoder.end_with(byte),
+impl<S: ByteSource> Decoder<S> {
+    pub fn decode_characters<T: fmt::Write>(&mut self, target: &mut T) -> Result<(), S::Error> {
+        target
+            .write_char(self.upper()? as char)
+            .map_err(|_| DecodeError::BufferOverflow)?;
+        loop {
+            match self.read_byte()? {
+                byte @ b'A'..=b'Z' | byte @ b'0'..=b'9' | byte @ b'_' => target
+                    .write_char(byte as char)
+                    .map_err(|_| DecodeError::BufferOverflow)?,
+                byte => break self.end_with(byte),
+            }
         }
     }
 }
@@ -71,7 +70,7 @@ mod tests {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut buffer = String::new();
-        super::decode_characters(&mut decoder, &mut buffer)?;
+        decoder.decode_characters(&mut buffer)?;
         Ok(buffer)
     }
 }

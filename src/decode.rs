@@ -138,59 +138,61 @@ impl<S: ByteSource> Decoder<S> {
     }
 }
 
-#[inline]
-fn sign<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
-    match decoder.read_byte()? {
-        byte @ b'-' | byte @ b'+' => Ok(byte),
-        _ => Err(DecodeError::Parse.into()),
+impl<S: ByteSource> Decoder<S> {
+    #[inline]
+    fn sign(&mut self) -> Result<u8, S::Error> {
+        match self.read_byte()? {
+            byte @ b'-' | byte @ b'+' => Ok(byte),
+            _ => Err(DecodeError::Parse.into()),
+        }
     }
-}
 
-#[inline]
-fn digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
-    match decoder.read_byte()? {
-        byte @ b'0'..=b'9' => Ok(byte),
-        _ => Err(DecodeError::Parse.into()),
+    #[inline]
+    fn digit(&mut self) -> Result<u8, S::Error> {
+        match self.read_byte()? {
+            byte @ b'0'..=b'9' => Ok(byte),
+            _ => Err(DecodeError::Parse.into()),
+        }
     }
-}
 
-#[inline]
-fn hex_digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
-    match decoder.read_byte()? {
-        byte @ b'A'..=b'F' => Ok(byte),
-        byte @ b'0'..=b'9' => Ok(byte),
-        _ => Err(DecodeError::Parse.into()),
+    #[inline]
+    fn hex_digit(&mut self) -> Result<u8, S::Error> {
+        match self.read_byte()? {
+            byte @ b'A'..=b'F' => Ok(byte),
+            byte @ b'0'..=b'9' => Ok(byte),
+            _ => Err(DecodeError::Parse.into()),
+        }
     }
-}
 
-#[inline]
-fn octal_digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
-    match decoder.read_byte()? {
-        byte @ b'0'..=b'7' => Ok(byte),
-        _ => Err(DecodeError::Parse.into()),
+    #[inline]
+    fn octal_digit(&mut self) -> Result<u8, S::Error> {
+        match self.read_byte()? {
+            byte @ b'0'..=b'7' => Ok(byte),
+            _ => Err(DecodeError::Parse.into()),
+        }
     }
-}
 
-#[inline]
-fn binary_digit<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
-    match decoder.read_byte()? {
-        byte @ b'0'..=b'1' => Ok(byte),
-        _ => Err(DecodeError::Parse.into()),
+    #[inline]
+    fn binary_digit(&mut self) -> Result<u8, S::Error> {
+        match self.read_byte()? {
+            byte @ b'0'..=b'1' => Ok(byte),
+            _ => Err(DecodeError::Parse.into()),
+        }
     }
-}
 
-#[inline]
-fn upper<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
-    match decoder.read_byte()? {
-        byte @ b'A'..=b'Z' => Ok(byte),
-        _ => Err(DecodeError::Parse.into()),
+    #[inline]
+    fn upper(&mut self) -> Result<u8, S::Error> {
+        match self.read_byte()? {
+            byte @ b'A'..=b'Z' => Ok(byte),
+            _ => Err(DecodeError::Parse.into()),
+        }
     }
-}
 
-#[inline]
-fn quote<S: ByteSource>(decoder: &mut Decoder<S>) -> Result<u8, S::Error> {
-    match decoder.read_byte()? {
-        byte @ b'"' => Ok(byte),
-        _ => Err(DecodeError::Parse.into()),
+    #[inline]
+    fn quote(&mut self) -> Result<u8, S::Error> {
+        match self.read_byte()? {
+            byte @ b'"' => Ok(byte),
+            _ => Err(DecodeError::Parse.into()),
+        }
     }
 }

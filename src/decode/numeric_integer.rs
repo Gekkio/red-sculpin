@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use super::{binary_digit, digit, hex_digit, octal_digit, Decoder};
+use super::Decoder;
 use crate::{decode::DecodeError, internal::Integer, ByteSource};
 
 /// Decodes numeric integer response data in plain (NR1), hexadecimal, octal, or binary format.
@@ -13,67 +13,67 @@ use crate::{decode::DecodeError, internal::Integer, ByteSource};
 /// - IEEE 488.2: 8.7.5 - \<HEXADECIMAL NUMERIC RESPONSE DATA\>
 /// - IEEE 488.2: 8.7.6 - \<OCTAL NUMERIC RESPONSE DATA\>
 /// - IEEE 488.2: 8.7.7 - \<BINARY NUMERIC RESPONSE DATA\>
-pub fn decode_numeric_integer<S: ByteSource, T: Integer>(
-    decoder: &mut Decoder<S>,
-) -> Result<T, S::Error> {
-    let mut buf = String::new();
-    match decoder.read_byte()? {
-        byte @ b'+' | byte @ b'-' => {
-            buf.push(byte as char);
-            buf.push(digit(decoder)? as char);
-        }
-        b'#' => match decoder.read_byte()? {
-            b'H' => {
-                buf.push(hex_digit(decoder)? as char);
-                return loop {
-                    match decoder.read_byte()? {
-                        byte @ b'A'..=b'F' => buf.push(byte as char),
-                        byte @ b'0'..=b'9' => buf.push(byte as char),
-                        byte => {
-                            decoder.end_with(byte)?;
-                            break T::from_str_radix(&buf, 16)
-                                .map_err(|_| DecodeError::Parse.into());
-                        }
-                    }
-                };
+impl<S: ByteSource> Decoder<S> {
+    pub fn decode_numeric_integer<T: Integer>(&mut self) -> Result<T, S::Error> {
+        let mut buf = String::new();
+        match self.read_byte()? {
+            byte @ b'+' | byte @ b'-' => {
+                buf.push(byte as char);
+                buf.push(self.digit()? as char);
             }
-            b'Q' => {
-                buf.push(octal_digit(decoder)? as char);
-                return loop {
-                    match decoder.read_byte()? {
-                        byte @ b'0'..=b'7' => buf.push(byte as char),
-                        byte => {
-                            decoder.end_with(byte)?;
-                            break T::from_str_radix(&buf, 8)
-                                .map_err(|_| DecodeError::Parse.into());
+            b'#' => match self.read_byte()? {
+                b'H' => {
+                    buf.push(self.hex_digit()? as char);
+                    return loop {
+                        match self.read_byte()? {
+                            byte @ b'A'..=b'F' => buf.push(byte as char),
+                            byte @ b'0'..=b'9' => buf.push(byte as char),
+                            byte => {
+                                self.end_with(byte)?;
+                                break T::from_str_radix(&buf, 16)
+                                    .map_err(|_| DecodeError::Parse.into());
+                            }
                         }
-                    }
-                };
-            }
-            b'B' => {
-                buf.push(binary_digit(decoder)? as char);
-                return loop {
-                    match decoder.read_byte()? {
-                        byte @ b'0' | byte @ b'1' => buf.push(byte as char),
-                        byte => {
-                            decoder.end_with(byte)?;
-                            break T::from_str_radix(&buf, 2)
-                                .map_err(|_| DecodeError::Parse.into());
+                    };
+                }
+                b'Q' => {
+                    buf.push(self.octal_digit()? as char);
+                    return loop {
+                        match self.read_byte()? {
+                            byte @ b'0'..=b'7' => buf.push(byte as char),
+                            byte => {
+                                self.end_with(byte)?;
+                                break T::from_str_radix(&buf, 8)
+                                    .map_err(|_| DecodeError::Parse.into());
+                            }
                         }
-                    }
-                };
-            }
-            _ => return Err(DecodeError::Parse)?,
-        },
-        byte @ b'0'..=b'9' => buf.push(byte as char),
-        _ => return Err(DecodeError::Parse)?,
-    }
-    loop {
-        match decoder.read_byte()? {
+                    };
+                }
+                b'B' => {
+                    buf.push(self.binary_digit()? as char);
+                    return loop {
+                        match self.read_byte()? {
+                            byte @ b'0' | byte @ b'1' => buf.push(byte as char),
+                            byte => {
+                                self.end_with(byte)?;
+                                break T::from_str_radix(&buf, 2)
+                                    .map_err(|_| DecodeError::Parse.into());
+                            }
+                        }
+                    };
+                }
+                _ => return Err(DecodeError::Parse)?,
+            },
             byte @ b'0'..=b'9' => buf.push(byte as char),
-            byte => {
-                decoder.end_with(byte)?;
-                break T::from_str_radix(&buf, 10).map_err(|_| DecodeError::Parse.into());
+            _ => return Err(DecodeError::Parse)?,
+        }
+        loop {
+            match self.read_byte()? {
+                byte @ b'0'..=b'9' => buf.push(byte as char),
+                byte => {
+                    self.end_with(byte)?;
+                    break T::from_str_radix(&buf, 10).map_err(|_| DecodeError::Parse.into());
+                }
             }
         }
     }
@@ -307,6 +307,6 @@ mod tests {
     fn decode<T: Integer>(bytes: &'static [u8]) -> Result<T, Error> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
-        super::decode_numeric_integer(&mut decoder)
+        decoder.decode_numeric_integer()
     }
 }

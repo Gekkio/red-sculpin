@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use super::{digit, sign, Decoder};
+use super::Decoder;
 use crate::{decode::DecodeError, internal::Float, ByteSource};
 
 /// Decodes numeric float response data in plain (NR2) or exponential (NR3) format.
@@ -11,47 +11,47 @@ use crate::{decode::DecodeError, internal::Float, ByteSource};
 ///
 /// - IEEE 488.2: 8.7.3 - \<NR2 NUMERIC RESPONSE DATA\>
 /// - IEEE 488.2: 8.7.4 - \<NR3 NUMERIC RESPONSE DATA\>
-pub fn decode_numeric_float<S: ByteSource, T: Float>(
-    decoder: &mut Decoder<S>,
-) -> Result<T, S::Error> {
-    let mut buf = String::new();
-    match decoder.read_byte()? {
-        byte @ b'+' | byte @ b'-' => {
-            buf.push(byte as char);
-            buf.push(digit(decoder)? as char);
-        }
-        byte @ b'0'..=b'9' => buf.push(byte as char),
-        _ => return Err(DecodeError::Parse.into()),
-    };
-    loop {
-        match decoder.read_byte()? {
+impl<S: ByteSource> Decoder<S> {
+    pub fn decode_numeric_float<T: Float>(&mut self) -> Result<T, S::Error> {
+        let mut buf = String::new();
+        match self.read_byte()? {
+            byte @ b'+' | byte @ b'-' => {
+                buf.push(byte as char);
+                buf.push(self.digit()? as char);
+            }
             byte @ b'0'..=b'9' => buf.push(byte as char),
-            byte @ b'.' => break buf.push(byte as char),
             _ => return Err(DecodeError::Parse.into()),
-        }
-    }
-    match decoder.read_byte()? {
-        byte @ b'0'..=b'9' => buf.push(byte as char),
-        _ => return Err(DecodeError::Parse.into()),
-    }
-    loop {
-        match decoder.read_byte()? {
-            byte @ b'0'..=b'9' => buf.push(byte as char),
-            byte @ b'E' => break buf.push(byte as char),
-            byte => {
-                decoder.end_with(byte)?;
-                return T::from_str(&buf).map_err(|_| DecodeError::Parse.into());
+        };
+        loop {
+            match self.read_byte()? {
+                byte @ b'0'..=b'9' => buf.push(byte as char),
+                byte @ b'.' => break buf.push(byte as char),
+                _ => return Err(DecodeError::Parse.into()),
             }
         }
-    }
-    buf.push(sign(decoder)? as char);
-    buf.push(digit(decoder)? as char);
-    loop {
-        match decoder.read_byte()? {
+        match self.read_byte()? {
             byte @ b'0'..=b'9' => buf.push(byte as char),
-            byte => {
-                decoder.end_with(byte)?;
-                break T::from_str(&buf).map_err(|_| DecodeError::Parse.into());
+            _ => return Err(DecodeError::Parse.into()),
+        }
+        loop {
+            match self.read_byte()? {
+                byte @ b'0'..=b'9' => buf.push(byte as char),
+                byte @ b'E' => break buf.push(byte as char),
+                byte => {
+                    self.end_with(byte)?;
+                    return T::from_str(&buf).map_err(|_| DecodeError::Parse.into());
+                }
+            }
+        }
+        buf.push(self.sign()? as char);
+        buf.push(self.digit()? as char);
+        loop {
+            match self.read_byte()? {
+                byte @ b'0'..=b'9' => buf.push(byte as char),
+                byte => {
+                    self.end_with(byte)?;
+                    break T::from_str(&buf).map_err(|_| DecodeError::Parse.into());
+                }
             }
         }
     }
@@ -162,6 +162,6 @@ mod tests {
     fn decode<T: Float>(bytes: &'static [u8]) -> Result<T, Error> {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
-        super::decode_numeric_float(&mut decoder)
+        decoder.decode_numeric_float()
     }
 }

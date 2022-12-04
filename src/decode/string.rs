@@ -4,7 +4,7 @@
 
 use core::fmt;
 
-use super::{quote, Decoder};
+use super::Decoder;
 use crate::{decode::DecodeError, ByteSource};
 
 /// Decodes string response data into the given target buffer.
@@ -12,23 +12,22 @@ use crate::{decode::DecodeError, ByteSource};
 /// As per IEEE 488.2, only ASCII is supported.
 ///
 /// Reference: IEEE 488.2: 8.7.8 - \<STRING RESPONSE DATA\>
-pub fn decode_string<S: ByteSource, T: fmt::Write>(
-    decoder: &mut Decoder<S>,
-    target: &mut T,
-) -> Result<(), S::Error> {
-    quote(decoder)?;
-    loop {
-        match decoder.read_byte()? {
-            b'"' => match decoder.read_byte()? {
-                b'"' => target
-                    .write_char('"')
+impl<S: ByteSource> Decoder<S> {
+    pub fn decode_string<T: fmt::Write>(&mut self, target: &mut T) -> Result<(), S::Error> {
+        self.quote()?;
+        loop {
+            match self.read_byte()? {
+                b'"' => match self.read_byte()? {
+                    b'"' => target
+                        .write_char('"')
+                        .map_err(|_| DecodeError::BufferOverflow)?,
+                    byte => break self.end_with(byte),
+                },
+                byte if byte.is_ascii() => target
+                    .write_char(byte as char)
                     .map_err(|_| DecodeError::BufferOverflow)?,
-                byte => break decoder.end_with(byte),
-            },
-            byte if byte.is_ascii() => target
-                .write_char(byte as char)
-                .map_err(|_| DecodeError::BufferOverflow)?,
-            _ => break Err(DecodeError::Parse.into()),
+                _ => break Err(DecodeError::Parse.into()),
+            }
         }
     }
 }
@@ -77,7 +76,7 @@ mod tests {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut buffer = String::new();
-        super::decode_string(&mut decoder, &mut buffer)?;
+        decoder.decode_string(&mut buffer)?;
         Ok(buffer)
     }
 }

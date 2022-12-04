@@ -10,17 +10,19 @@ use crate::{decode::DecodeError, ByteSource};
 /// Decodes arbitrary ASCII response data into the given target buffer.
 ///
 /// Reference: IEEE 488.2: 8.7.11 - \<ARBITRARY ASCII RESPONSE DATA\>
-pub fn decode_arbitrary_ascii<S: ByteSource, T: fmt::Write>(
-    decoder: &mut Decoder<S>,
-    target: &mut T,
-) -> Result<(), S::Error> {
-    loop {
-        match decoder.read_byte()? {
-            byte @ b'\n' => break decoder.end_with(byte),
-            byte if byte.is_ascii() => target
-                .write_char(byte as char)
-                .map_err(|_| DecodeError::BufferOverflow)?,
-            _ => break Err(DecodeError::Parse.into()),
+impl<S: ByteSource> Decoder<S> {
+    pub fn decode_arbitrary_ascii<T: fmt::Write>(
+        &mut self,
+        target: &mut T,
+    ) -> Result<(), S::Error> {
+        loop {
+            match self.read_byte()? {
+                byte @ b'\n' => break self.end_with(byte),
+                byte if byte.is_ascii() => target
+                    .write_char(byte as char)
+                    .map_err(|_| DecodeError::BufferOverflow)?,
+                _ => break Err(DecodeError::Parse.into()),
+            }
         }
     }
 }
@@ -65,7 +67,7 @@ mod tests {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut buffer = String::new();
-        super::decode_arbitrary_ascii(&mut decoder, &mut buffer)?;
+        decoder.decode_arbitrary_ascii(&mut buffer)?;
         Ok(buffer)
     }
 }

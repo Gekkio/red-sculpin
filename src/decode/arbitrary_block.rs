@@ -4,7 +4,7 @@
 
 use core::str;
 
-use super::{digit, Decoder};
+use super::Decoder;
 use crate::{decode::DecodeError, internal::ArrayBuffer, ByteSink, ByteSource};
 
 /// Decodes arbitrary block response data into the given target buffer.
@@ -13,45 +13,44 @@ use crate::{decode::DecodeError, internal::ArrayBuffer, ByteSink, ByteSource};
 ///
 /// - IEEE 488.2: 8.7.9 - \<DEFINITE LENGTH ARBITRARY BLOCK RESPONSE DATA\>
 /// - IEEE 488.2: 8.7.10 - \<INDEFINITE LENGTH ARBITRARY BLOCK RESPONSE DATA\>
-pub fn decode_arbitrary_block<S: ByteSource, T: ByteSink>(
-    decoder: &mut Decoder<S>,
-    target: &mut T,
-) -> Result<(), S::Error> {
-    match decoder.read_byte()? {
-        b'#' => (),
-        _ => return Err(DecodeError::Parse.into()),
-    }
-    match decoder.read_byte()? {
-        byte @ b'1'..=b'9' => {
-            // definite length format
-            let digits = (byte - b'0') as usize;
-            let mut buf = ArrayBuffer::<9>::new();
-            for _ in 0..digits {
-                buf.push(digit(decoder)?)
-                    .map_err(|_| DecodeError::BufferOverflow)?;
-            }
-            let block_size = str::from_utf8(buf.finish())
-                .ok()
-                .and_then(|text| text.parse().ok())
-                .ok_or(DecodeError::Parse)?;
-            for _ in 0..block_size {
-                target
-                    .write_byte(decoder.read_byte()?)
-                    .map_err(|_| DecodeError::BufferOverflow)?;
-            }
-            let byte = decoder.read_byte()?;
-            decoder.end_with(byte)
+impl<S: ByteSource> Decoder<S> {
+    pub fn decode_arbitrary_block<T: ByteSink>(&mut self, target: &mut T) -> Result<(), S::Error> {
+        match self.read_byte()? {
+            b'#' => (),
+            _ => return Err(DecodeError::Parse.into()),
         }
-        b'0' => loop {
-            // indefinite length format
-            match decoder.read_byte()? {
-                byte @ b'\n' => break decoder.end_with(byte),
-                byte => target
-                    .write_byte(byte)
-                    .map_err(|_| DecodeError::BufferOverflow)?,
+        match self.read_byte()? {
+            byte @ b'1'..=b'9' => {
+                // definite length format
+                let digits = (byte - b'0') as usize;
+                let mut buf = ArrayBuffer::<9>::new();
+                for _ in 0..digits {
+                    buf.push(self.digit()?)
+                        .map_err(|_| DecodeError::BufferOverflow)?;
+                }
+                let block_size = str::from_utf8(buf.finish())
+                    .ok()
+                    .and_then(|text| text.parse().ok())
+                    .ok_or(DecodeError::Parse)?;
+                for _ in 0..block_size {
+                    target
+                        .write_byte(self.read_byte()?)
+                        .map_err(|_| DecodeError::BufferOverflow)?;
+                }
+                let byte = self.read_byte()?;
+                self.end_with(byte)
             }
-        },
-        _ => Err(DecodeError::Parse.into()),
+            b'0' => loop {
+                // indefinite length format
+                match self.read_byte()? {
+                    byte @ b'\n' => break self.end_with(byte),
+                    byte => target
+                        .write_byte(byte)
+                        .map_err(|_| DecodeError::BufferOverflow)?,
+                }
+            },
+            _ => Err(DecodeError::Parse.into()),
+        }
     }
 }
 
@@ -136,7 +135,7 @@ mod tests {
         let mut decoder = Decoder::new(bytes);
         decoder.begin_response_data()?;
         let mut result = Vec::new();
-        super::decode_arbitrary_block(&mut decoder, &mut result)?;
+        decoder.decode_arbitrary_block(&mut result)?;
         Ok(result)
     }
 }
