@@ -211,6 +211,17 @@ where
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct CharacterProgramData<'a>(pub &'a str);
+
+impl<'a> ProgramData for CharacterProgramData<'a> {
+    fn encode<S: EncodeSink>(&self, encoder: &mut Encoder<S>) -> Result<(), S::Error> {
+        encoder.begin_program_data()?;
+        encoder.encode_characters(self.0)
+    }
+}
+
 #[cfg(test)]
 use crate::encode::EncodeError;
 #[cfg(test)]

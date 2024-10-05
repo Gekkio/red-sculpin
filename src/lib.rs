@@ -16,7 +16,7 @@
 //! * `&[u8]`: IEEE 488.2 arbitrary block program data, definite length format
 //! * `&str`: IEEE 488.2 string program data
 //! * `Option<T>`: `Some(value)`=contained value encoded normally, `None`=no value encoded
-//! * `ProgramChars`: IEEE 488.2 character program data
+//! * `CharacterProgramData`: IEEE 488.2 character program data
 //! * `ProgramList`: elements encoded as separate comma-delimited program data values
 //!
 //! Decoding formats:
@@ -67,7 +67,7 @@ use crate::{
 };
 pub use crate::{
     ieee::types::*,
-    program_data::{ProgramData, ProgramList},
+    program_data::{CharacterProgramData, ProgramData, ProgramList},
     response_data::{ArbitraryAscii, CharacterResponseData, ResponseData, ResponseList},
     scpi::types::*,
     utils::is_program_mnemonic,
